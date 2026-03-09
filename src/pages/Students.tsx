@@ -1,0 +1,408 @@
+import React, { useState, useEffect } from 'react';
+import { motion } from 'motion/react';
+import { collection, query, where, getDocs, addDoc } from 'firebase/firestore';
+import { db, handleFirestoreError, OperationType } from '../firebase';
+import { 
+  Search, 
+  Plus, 
+  Filter, 
+  MoreVertical, 
+  Edit, 
+  Trash2, 
+  UserPlus, 
+  FileDown, 
+  FileUp,
+  X,
+  Camera,
+  ChevronLeft,
+  ChevronRight,
+  Activity,
+  Ruler,
+  Scale,
+  Award,
+  QrCode
+} from 'lucide-react';
+import { useAuth } from '../App';
+import { useNavigate } from 'react-router-dom';
+import { User } from '../types';
+import Papa from 'papaparse';
+
+export default function Students() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [students, setStudents] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isHealthModalOpen, setIsHealthModalOpen] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState<User | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // Form States
+  const [formData, setFormData] = useState({
+    username: '',
+    password: '',
+    fullName: '',
+    indexNumber: '',
+    dob: '',
+    gender: 'Male',
+    class: '',
+    address: '',
+    parentName: '',
+    parentContact: '',
+    photoUrl: ''
+  });
+
+  const [healthData, setHealthData] = useState({
+    height: '',
+    weight: '',
+    date: new Date().toISOString().split('T')[0]
+  });
+
+  useEffect(() => {
+    if (user) {
+      fetchStudents();
+    }
+  }, [user]);
+
+  const fetchStudents = async () => {
+    try {
+      const q = query(collection(db, 'users'), where('role', '==', 'student'));
+      const querySnapshot = await getDocs(q);
+      const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setStudents(data as any);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.GET, 'users');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateStudent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await addDoc(collection(db, 'users'), {
+        ...formData,
+        role: 'student',
+        points: 0,
+        createdAt: new Date().toISOString()
+      });
+      fetchStudents();
+      setIsModalOpen(false);
+      setFormData({
+        username: '', password: '', fullName: '', indexNumber: '', dob: '',
+        gender: 'Male', class: '', address: '', parentName: '', parentContact: '', photoUrl: ''
+      });
+    } catch (err) {
+      handleFirestoreError(err, OperationType.CREATE, 'users');
+    }
+  };
+
+  const handleAddHealthRecord = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedStudent) return;
+    try {
+      const heightInMeters = parseFloat(healthData.height) / 100;
+      const weightInKg = parseFloat(healthData.weight);
+      const bmi = weightInKg / (heightInMeters * heightInMeters);
+      
+      let category = 'Normal';
+      if (bmi < 18.5) category = 'Underweight';
+      else if (bmi >= 25 && bmi < 30) category = 'Overweight';
+      else if (bmi >= 30) category = 'Obese';
+
+      await addDoc(collection(db, 'health_records'), {
+        userId: selectedStudent.id,
+        height: parseFloat(healthData.height),
+        weight: parseFloat(healthData.weight),
+        bmi,
+        category,
+        date: healthData.date,
+        createdAt: new Date().toISOString()
+      });
+      setIsHealthModalOpen(false);
+      setHealthData({ height: '', weight: '', date: new Date().toISOString().split('T')[0] });
+    } catch (err) {
+      handleFirestoreError(err, OperationType.CREATE, 'health_records');
+    }
+  };
+
+  const handleExportCSV = () => {
+    const csv = Papa.unparse(students);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'students.csv';
+    link.click();
+  };
+
+  const filteredStudents = students.filter(s => 
+    s.fullName.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    s.indexNumber?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  return (
+    <div className="space-y-8">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Student Management</h1>
+          <p className="text-slate-500">Register and monitor student health profiles</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={handleExportCSV}
+            className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-700 font-bold hover:bg-slate-50 transition-all shadow-sm"
+          >
+            <FileDown size={18} />
+            Export
+          </button>
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2.5 bg-blue-500 text-white rounded-xl font-bold hover:bg-blue-600 transition-all shadow-lg shadow-blue-200"
+          >
+            <UserPlus size={18} />
+            Add Student
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+        <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <input 
+              type="text" 
+              placeholder="Search by name or index number..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <button className="p-2 hover:bg-slate-100 rounded-lg text-slate-500">
+              <Filter size={20} />
+            </button>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="bg-slate-50/50 text-slate-500 text-xs font-bold uppercase tracking-wider">
+                <th className="px-6 py-4">Student</th>
+                <th className="px-6 py-4">Index No</th>
+                <th className="px-6 py-4">Class</th>
+                <th className="px-6 py-4">Gender</th>
+                <th className="px-6 py-4">Points</th>
+                <th className="px-6 py-4">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filteredStudents.map((student) => (
+                <tr key={student.id} className="hover:bg-slate-50/50 transition-colors">
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-slate-100 overflow-hidden">
+                        <img 
+                          src={student.photoUrl || `https://ui-avatars.com/api/?name=${student.fullName}&background=3b82f6&color=fff`} 
+                          alt="" 
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-slate-900">{student.fullName}</p>
+                        <p className="text-xs text-slate-500">{student.username}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-slate-600 font-medium">{student.indexNumber}</td>
+                  <td className="px-6 py-4">
+                    <span className="px-2.5 py-1 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold">{student.class}</span>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-slate-600">{student.gender}</td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-1 text-blue-600 font-bold">
+                      <Award size={14} />
+                      {student.points}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-2">
+                      <button 
+                        onClick={() => navigate(`/health-passport/${student.id}`)}
+                        className="p-2 hover:bg-slate-50 text-slate-600 rounded-lg transition-colors"
+                        title="View Health Passport"
+                      >
+                        <QrCode size={18} />
+                      </button>
+                      <button 
+                        onClick={() => { setSelectedStudent(student); setIsHealthModalOpen(true); }}
+                        className="p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors"
+                        title="Add Health Record"
+                      >
+                        <Activity size={18} />
+                      </button>
+                      <button className="p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors">
+                        <Edit size={18} />
+                      </button>
+                      <button className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-colors">
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Add Student Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl"
+          >
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white z-10">
+              <h2 className="text-xl font-bold text-slate-900">Register New Student</h2>
+              <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500">
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleCreateStudent} className="p-8 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700">Full Name</label>
+                  <input 
+                    type="text" 
+                    required
+                    value={formData.fullName}
+                    onChange={(e) => setFormData({...formData, fullName: e.target.value})}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700">Index Number</label>
+                  <input 
+                    type="text" 
+                    required
+                    value={formData.indexNumber}
+                    onChange={(e) => setFormData({...formData, indexNumber: e.target.value})}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700">Username</label>
+                  <input 
+                    type="text" 
+                    required
+                    value={formData.username}
+                    onChange={(e) => setFormData({...formData, username: e.target.value})}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700">Password</label>
+                  <input 
+                    type="password" 
+                    required
+                    value={formData.password}
+                    onChange={(e) => setFormData({...formData, password: e.target.value})}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700">Date of Birth</label>
+                  <input 
+                    type="date" 
+                    required
+                    value={formData.dob}
+                    onChange={(e) => setFormData({...formData, dob: e.target.value})}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700">Class / Grade</label>
+                  <input 
+                    type="text" 
+                    required
+                    value={formData.class}
+                    onChange={(e) => setFormData({...formData, class: e.target.value})}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 pt-6">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-2.5 text-slate-600 font-bold">Cancel</button>
+                <button type="submit" className="px-8 py-2.5 bg-blue-500 text-white rounded-xl font-bold hover:bg-blue-600 shadow-lg shadow-blue-200">Register Student</button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Add Health Record Modal */}
+      {isHealthModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white rounded-3xl w-full max-w-md shadow-2xl"
+          >
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-slate-900">New Health Record</h2>
+              <button onClick={() => setIsHealthModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500">
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleAddHealthRecord} className="p-8 space-y-6">
+              <p className="text-sm text-slate-500">Recording measurements for <span className="font-bold text-slate-900">{selectedStudent?.fullName}</span></p>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                    <Ruler size={16} className="text-blue-500" /> Height (cm)
+                  </label>
+                  <input 
+                    type="number" 
+                    step="0.1"
+                    required
+                    value={healthData.height}
+                    onChange={(e) => setHealthData({...healthData, height: e.target.value})}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                    <Scale size={16} className="text-blue-500" /> Weight (kg)
+                  </label>
+                  <input 
+                    type="number" 
+                    step="0.1"
+                    required
+                    value={healthData.weight}
+                    onChange={(e) => setHealthData({...healthData, weight: e.target.value})}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700">Measurement Date</label>
+                  <input 
+                    type="date" 
+                    required
+                    value={healthData.date}
+                    onChange={(e) => setHealthData({...healthData, date: e.target.value})}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+              </div>
+              <button type="submit" className="w-full py-3.5 bg-blue-500 text-white rounded-2xl font-bold hover:bg-blue-600 shadow-lg shadow-blue-200 transition-all">
+                Save Record
+              </button>
+            </form>
+          </motion.div>
+        </div>
+      )}
+    </div>
+  );
+}
