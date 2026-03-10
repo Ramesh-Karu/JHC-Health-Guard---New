@@ -283,7 +283,10 @@ const Layout = () => {
 };
 
 const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(() => {
+    const cached = localStorage.getItem('user');
+    return cached ? JSON.parse(cached) : null;
+  });
   const [loading, setLoading] = useState(true);
   const [isAuthReady, setIsAuthReady] = useState(false);
 
@@ -295,25 +298,21 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
           if (userDoc.exists()) {
             const userData = userDoc.data() as User;
-            setUser({ ...userData, id: firebaseUser.uid });
+            const userObj = { ...userData, id: firebaseUser.uid };
+            setUser(userObj);
+            localStorage.setItem('user', JSON.stringify(userObj));
           } else {
-            // Handle case where user document doesn't exist yet
-            setUser({
-              id: firebaseUser.uid,
-              email: firebaseUser.email || '',
-              fullName: firebaseUser.displayName || 'User',
-              role: 'student', // Default role
-              username: firebaseUser.email?.split('@')[0] || 'user',
-              points: 0,
-              createdAt: new Date().toISOString()
-            } as User);
+            setUser(null);
+            localStorage.removeItem('user');
           }
         } catch (error) {
           console.error("Error fetching user data:", error);
           setUser(null);
+          localStorage.removeItem('user');
         }
       } else {
         setUser(null);
+        localStorage.removeItem('user');
       }
       setLoading(false);
       setIsAuthReady(true);
@@ -322,14 +321,16 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => unsubscribe();
   }, []);
 
-  const login = (newUser: any) => {
+  const login = (newUser: User) => {
     setUser(newUser);
+    localStorage.setItem('user', JSON.stringify(newUser));
   };
 
   const logout = async () => {
     try {
       await signOut(auth);
       setUser(null);
+      localStorage.removeItem('user');
     } catch (error) {
       console.error("Logout error:", error);
     }
@@ -344,6 +345,7 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
 const ProtectedRoute = ({ allowedRoles }: { allowedRoles?: string[] }) => {
   const { user, loading } = useAuth();
+  const location = useLocation();
   
   if (loading) return (
     <div className="h-screen w-screen flex items-center justify-center bg-white">
@@ -356,6 +358,11 @@ const ProtectedRoute = ({ allowedRoles }: { allowedRoles?: string[] }) => {
   );
 
   if (!user) return <Navigate to="/login" />;
+  
+  if (user.role === 'student' && !user.profileCompleted && location.pathname !== '/profile') {
+    return <Navigate to="/profile" />;
+  }
+
   if (allowedRoles && !allowedRoles.includes(user.role)) {
     if (user.role === 'teacher') return <Navigate to="/teacher/dashboard" />;
     return <Navigate to="/dashboard" />;

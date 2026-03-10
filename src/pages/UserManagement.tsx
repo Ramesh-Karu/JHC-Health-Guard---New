@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'motion/react';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
@@ -8,6 +8,7 @@ import firebaseConfig from '../../firebase-applet-config.json';
 import { Search, Plus, Trash2, FileDown, FileUp, X, UserPlus, Edit2 } from 'lucide-react';
 import { useAuth } from '../App';
 import Papa from 'papaparse';
+import * as XLSX from 'xlsx';
 import { User } from '../types';
 import Toast from '../components/Toast';
 
@@ -15,6 +16,7 @@ export default function UserManagement() {
   const { user } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -39,17 +41,23 @@ export default function UserManagement() {
     return () => unsubscribe();
   }, []);
 
+  const filteredUsers = useMemo(() => {
+    return users.filter(u => 
+      u.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      u.role.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [users, searchTerm]);
+
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      // Create a temporary secondary app instance
       const tempApp = initializeApp(firebaseConfig, 'temp-create-user-' + Date.now());
       const tempAuth = getAuth(tempApp);
       
       const systemEmail = `${formData.username}@school.internal`;
       const userCredential = await createUserWithEmailAndPassword(tempAuth, systemEmail, formData.password);
       
-      // Create the user document
       await setDoc(doc(db, 'users', userCredential.user.uid), {
         email: formData.email,
         username: formData.username,
@@ -57,10 +65,10 @@ export default function UserManagement() {
         fullName: formData.fullName,
         role: formData.role,
         passwordChanged: false,
+        profileCompleted: false,
         createdAt: new Date().toISOString()
       });
       
-      // Delete the temporary app
       await deleteApp(tempApp);
       
       setIsModalOpen(false);
@@ -110,40 +118,57 @@ export default function UserManagement() {
     link.click();
   };
 
-  const handleImportCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    Papa.parse(file, {
-      header: true,
-      complete: async (results) => {
-        for (const row of results.data as any[]) {
-          if (row.email && row.password) {
-            try {
-              // Create a temporary secondary app instance
-              const tempApp = initializeApp(firebaseConfig, 'temp-import-user-' + Date.now());
-              const tempAuth = getAuth(tempApp);
-              
-              const userCredential = await createUserWithEmailAndPassword(tempAuth, row.email, row.password);
-              
-              await setDoc(doc(db, 'users', userCredential.user.uid), {
-                email: row.email,
-                fullName: row.fullName,
-                role: row.role || 'student',
-                passwordChanged: false,
-                createdAt: new Date().toISOString()
-              });
-              
-              // Delete the temporary app
-              await deleteApp(tempApp);
-            } catch (err) {
-              console.error('Error importing user:', err);
-              setToast({ message: 'Error importing some users', type: 'error' });
-            }
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const data = event.target?.result;
+      let usersToImport: any[] = [];
+
+      if (file.name.endsWith('.csv')) {
+        Papa.parse(data as string, {
+          header: true,
+          complete: (results) => { usersToImport = results.data; }
+        });
+      } else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+        const workbook = XLSX.read(data, { type: 'binary' });
+        const sheetName = workbook.SheetNames[0];
+        usersToImport = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+      }
+
+      for (const row of usersToImport) {
+        if (row.username && row.fullName && row.password) {
+          try {
+            const tempApp = initializeApp(firebaseConfig, 'temp-import-user-' + Date.now());
+            const tempAuth = getAuth(tempApp);
+            
+            const systemEmail = `${row.username}@school.internal`;
+            const userCredential = await createUserWithEmailAndPassword(tempAuth, systemEmail, row.password);
+            
+            await setDoc(doc(db, 'users', userCredential.user.uid), {
+              email: row.email || '',
+              username: row.username,
+              systemEmail: systemEmail,
+              fullName: row.fullName,
+              role: row.role || 'student',
+              passwordChanged: false,
+              profileCompleted: false,
+              createdAt: new Date().toISOString()
+            });
+            
+            await deleteApp(tempApp);
+          } catch (err) {
+            console.error('Error importing user:', err);
           }
         }
-        setToast({ message: 'CSV import completed successfully', type: 'success' });
       }
-    });
+      setToast({ message: 'Import completed', type: 'success' });
+    };
+    
+    if (file.name.endsWith('.csv')) reader.readAsText(file);
+    else reader.readAsBinaryString(file);
   };
 
   return (
@@ -151,12 +176,22 @@ export default function UserManagement() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h1 className="text-2xl font-bold text-slate-900">User Management</h1>
         <div className="flex flex-wrap gap-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <input 
+              type="text" 
+              placeholder="Search users..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl"
+            />
+          </div>
           <button onClick={handleExportCSV} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-slate-700 font-bold hover:bg-slate-50">
             <FileDown size={18} /> Export CSV
           </button>
           <label className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-slate-700 font-bold hover:bg-slate-50 cursor-pointer">
-            <FileUp size={18} /> Import CSV
-            <input type="file" accept=".csv" onChange={handleImportCSV} className="hidden" />
+            <FileUp size={18} /> Import File
+            <input type="file" accept=".csv, .xlsx, .xls" onChange={handleImportFile} className="hidden" />
           </label>
           <button onClick={() => setIsModalOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-xl font-bold hover:bg-blue-600">
             <UserPlus size={18} /> Add User
@@ -175,7 +210,7 @@ export default function UserManagement() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {users.map((u) => (
+            {filteredUsers.map((u) => (
               <tr key={u.id}>
                 <td className="px-6 py-4 font-bold">{u.fullName}</td>
                 <td className="px-6 py-4">{u.email}</td>

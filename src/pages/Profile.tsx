@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
+import { useNavigate } from 'react-router-dom';
 import { 
   User as UserIcon, 
   Mail, 
@@ -23,7 +24,8 @@ import { User } from '../types';
 
 export default function Profile() {
   const { user, login } = useAuth();
-  const [isEditing, setIsEditing] = useState(false);
+  const navigate = useNavigate();
+  const [isEditing, setIsEditing] = useState(!user?.profileCompleted);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<Partial<User>>({});
 
@@ -48,11 +50,14 @@ export default function Profile() {
     setLoading(true);
     try {
       const userRef = doc(db, 'users', user.id);
-      await updateDoc(userRef, formData);
+      // Ensure profileCompleted is set to true when saving
+      const updatedData = { ...formData, profileCompleted: true };
+      await updateDoc(userRef, updatedData);
       
-      const updatedUser = { ...user, ...formData };
+      const updatedUser = { ...user, ...updatedData };
       login(updatedUser);
       setIsEditing(false);
+      navigate('/dashboard');
     } catch (err) {
       handleFirestoreError(err, OperationType.UPDATE, `users/${user.id}`);
     } finally {
@@ -105,20 +110,22 @@ export default function Profile() {
                 <div className="flex gap-3">
                   {isEditing ? (
                     <>
-                      <button 
-                        onClick={() => setIsEditing(false)}
-                        className="flex items-center gap-2 px-4 py-2 text-slate-600 font-bold hover:bg-slate-50 rounded-xl transition-all"
-                      >
-                        <X size={18} />
-                        Cancel
-                      </button>
+                      {!user.profileCompleted ? null : (
+                        <button 
+                          onClick={() => setIsEditing(false)}
+                          className="flex items-center gap-2 px-4 py-2 text-slate-600 font-bold hover:bg-slate-50 rounded-xl transition-all"
+                        >
+                          <X size={18} />
+                          Cancel
+                        </button>
+                      )}
                       <button 
                         onClick={handleSave}
                         disabled={loading}
                         className="flex items-center gap-2 px-6 py-2 bg-blue-500 text-white font-bold rounded-xl shadow-lg shadow-blue-200 hover:bg-blue-600 transition-all disabled:opacity-70"
                       >
                         <Save size={18} />
-                        {loading ? 'Saving...' : 'Save Changes'}
+                        {loading ? 'Saving...' : user.profileCompleted ? 'Save Changes' : 'Continue'}
                       </button>
                     </>
                   ) : (

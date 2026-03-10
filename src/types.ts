@@ -7,6 +7,7 @@ export interface User {
   role: UserRole;
   fullName: string;
   passwordChanged?: boolean;
+  profileCompleted?: boolean;
   indexNumber?: string;
   dob?: string;
   gender?: string;
