@@ -3,6 +3,7 @@ import { collection, query, where, getDocs, addDoc } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { Search, Save, User, FileUp } from 'lucide-react';
 import Papa from 'papaparse';
+import Toast from '../components/Toast';
 
 export default function AdminHealthUpdate() {
   const [indexNumber, setIndexNumber] = useState('');
@@ -10,6 +11,7 @@ export default function AdminHealthUpdate() {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({ height: '', weight: '' });
   const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const searchStudent = async () => {
     if (!indexNumber) return;
@@ -54,11 +56,12 @@ export default function AdminHealthUpdate() {
         createdAt: new Date().toISOString()
       });
 
-      alert('Health data updated successfully!');
+      setToast({ message: 'Health data updated successfully!', type: 'success' });
       setFormData({ height: '', weight: '' });
       setStudent(null);
       setIndexNumber('');
     } catch (err) {
+      setToast({ message: 'Error updating health data', type: 'error' });
       handleFirestoreError(err, OperationType.CREATE, 'health_records');
     } finally {
       setSaving(false);
@@ -101,7 +104,7 @@ export default function AdminHealthUpdate() {
             }
           }
         }
-        alert('CSV import completed!');
+        setToast({ message: 'CSV import completed successfully!', type: 'success' });
       }
     });
   };
@@ -185,6 +188,14 @@ export default function AdminHealthUpdate() {
           </form>
         )}
       </div>
+
+      {toast && (
+        <Toast 
+          message={toast.message} 
+          type={toast.type} 
+          onClose={() => setToast(null)} 
+        />
+      )}
     </div>
   );
 }

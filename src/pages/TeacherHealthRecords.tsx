@@ -4,6 +4,7 @@ import { collection, query, where, getDocs, addDoc, orderBy, limit } from 'fireb
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { Activity, Plus, Search } from 'lucide-react';
 import { useAuth } from '../App';
+import Toast from '../components/Toast';
 
 export default function TeacherHealthRecords() {
   const { user } = useAuth();
@@ -11,6 +12,7 @@ export default function TeacherHealthRecords() {
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   
   const [formData, setFormData] = useState({
     userId: '',
@@ -88,6 +90,7 @@ export default function TeacherHealthRecords() {
       });
       
       setShowAddModal(false);
+      setToast({ message: 'Health record saved successfully', type: 'success' });
       setFormData({
         userId: '',
         height: '',
@@ -271,6 +274,14 @@ export default function TeacherHealthRecords() {
             </form>
           </motion.div>
         </div>
+      )}
+
+      {toast && (
+        <Toast 
+          message={toast.message} 
+          type={toast.type} 
+          onClose={() => setToast(null)} 
+        />
       )}
     </div>
   );

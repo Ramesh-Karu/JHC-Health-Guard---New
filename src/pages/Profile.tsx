@@ -51,7 +51,7 @@ export default function Profile() {
       await updateDoc(userRef, formData);
       
       const updatedUser = { ...user, ...formData };
-      login('', updatedUser);
+      login(updatedUser);
       setIsEditing(false);
     } catch (err) {
       handleFirestoreError(err, OperationType.UPDATE, `users/${user.id}`);

@@ -62,7 +62,10 @@ service cloud.firestore {
     // ===============================================================
     
     function isValidUser(data) {
-      return data.uid is string && data.email is string && data.fullName is string && data.role in ['student', 'teacher', 'coach', 'admin'];
+      return (data.uid is string || !('uid' in data)) && 
+             (data.email is string || !('email' in data)) && 
+             (data.fullName is string || !('fullName' in data)) && 
+             (data.role in ['student', 'teacher', 'coach', 'admin', 'organic-admin', 'breakfast-admin'] || !('role' in data));
     }
     
     // ===============================================================
@@ -73,7 +76,7 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && (isOwner(userId) || isAdmin());
       allow update: if isAuthenticated() && isValidUser(request.resource.data) && (
-        (isOwner(userId) && request.resource.data.role == resource.data.role) || isAdmin()
+        (isOwner(userId)) || isAdmin()
       );
       allow delete: if isAdmin();
     }
@@ -160,11 +163,23 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
-    match /reservations/{reservationId} {
+    match /breakfast_reservations/{reservationId} {
       allow read: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin());
       allow create: if isAuthenticated() && isOwner(request.resource.data.userId);
       allow update: if isAdmin();
       allow delete: if isAdmin();
+    }
+
+    match /organic_reservations/{reservationId} {
+      allow read: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin());
+      allow create: if isAuthenticated() && isOwner(request.resource.data.userId);
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /home_page_data/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
     }
   }
 }

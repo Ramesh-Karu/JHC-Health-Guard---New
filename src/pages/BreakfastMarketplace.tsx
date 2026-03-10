@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { collection, getDocs, addDoc, updateDoc, doc, increment } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { useAuth } from '../App';
+import Toast from '../components/Toast';
 
 export default function BreakfastMarketplace() {
   const { user } = useAuth();
   const [items, setItems] = useState([]);
   const [quantities, setQuantities] = useState<any>({});
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -52,9 +54,10 @@ export default function BreakfastMarketplace() {
         quantity: increment(-quantity)
       });
 
-      alert('Reserved successfully!');
+      setToast({ message: 'Reserved successfully!', type: 'success' });
       fetchItems();
     } catch (error) {
+      setToast({ message: 'Error reserving item', type: 'error' });
       handleFirestoreError(error, OperationType.CREATE, 'breakfast_reservations');
     }
   };
@@ -80,6 +83,13 @@ export default function BreakfastMarketplace() {
           </div>
         ))}
       </div>
+      {toast && (
+        <Toast 
+          message={toast.message} 
+          type={toast.type} 
+          onClose={() => setToast(null)} 
+        />
+      )}
     </div>
   );
 }

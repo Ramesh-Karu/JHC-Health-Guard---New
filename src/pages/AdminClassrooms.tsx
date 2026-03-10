@@ -4,6 +4,7 @@ import { collection, query, where, getDocs, addDoc, doc, updateDoc, deleteDoc } 
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { Plus, Search, Edit2, Trash2, Users } from 'lucide-react';
 import { useAuth } from '../App';
+import Toast from '../components/Toast';
 
 export default function AdminClassrooms() {
   const [classrooms, setClassrooms] = useState([]);
@@ -12,6 +13,7 @@ export default function AdminClassrooms() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingClassroom, setEditingClassroom] = useState<any>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   
   const [formData, setFormData] = useState({
     grade: '',
@@ -71,6 +73,7 @@ export default function AdminClassrooms() {
       
       setShowAddModal(false);
       setEditingClassroom(null);
+      setToast({ message: editingClassroom ? 'Classroom updated successfully' : 'Classroom added successfully', type: 'success' });
       setFormData({ grade: '', division: '', teacherId: '' });
       fetchData();
     } catch (error) {
@@ -83,6 +86,7 @@ export default function AdminClassrooms() {
     
     try {
       await deleteDoc(doc(db, 'classrooms', id));
+      setToast({ message: 'Classroom deleted successfully', type: 'success' });
       fetchData();
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `classrooms/${id}`);
@@ -260,6 +264,14 @@ export default function AdminClassrooms() {
             </form>
           </motion.div>
         </div>
+      )}
+
+      {toast && (
+        <Toast 
+          message={toast.message} 
+          type={toast.type} 
+          onClose={() => setToast(null)} 
+        />
       )}
     </div>
   );

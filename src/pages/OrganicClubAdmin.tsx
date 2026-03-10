@@ -4,6 +4,7 @@ import { db, handleFirestoreError, OperationType } from '../firebase';
 import { useAuth } from '../App';
 import { QrCode } from 'lucide-react';
 import QRScanner from '../components/QRScanner';
+import Toast from '../components/Toast';
 
 export default function OrganicClubAdmin() {
   const { user } = useAuth();
@@ -12,6 +13,7 @@ export default function OrganicClubAdmin() {
   const [analytics, setAnalytics] = useState<any>({ totalReservations: 0, totalRevenue: 0, popularVegetables: [] });
   const [formData, setFormData] = useState({ name: '', imageUrl: '', description: '', price: 0, quantity: 0, harvestDate: '', sellingDay: '', nutritionBenefits: '', isOrganic: 1 });
   const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -61,8 +63,10 @@ export default function OrganicClubAdmin() {
         createdAt: new Date().toISOString()
       });
       fetchData();
+      setToast({ message: 'Vegetable added successfully', type: 'success' });
       setFormData({ name: '', imageUrl: '', description: '', price: 0, quantity: 0, harvestDate: '', sellingDay: '', nutritionBenefits: '', isOrganic: 1 });
     } catch (error) {
+      setToast({ message: 'Error adding vegetable', type: 'error' });
       handleFirestoreError(error, OperationType.CREATE, 'vegetables');
     }
   };
@@ -72,8 +76,10 @@ export default function OrganicClubAdmin() {
       await updateDoc(doc(db, 'organic_reservations', id), {
         status: 'Collected'
       });
+      setToast({ message: 'Reservation marked as collected', type: 'success' });
       fetchData();
     } catch (error) {
+      setToast({ message: 'Error marking reservation', type: 'error' });
       handleFirestoreError(error, OperationType.UPDATE, `organic_reservations/${id}`);
     }
   };
@@ -131,6 +137,13 @@ export default function OrganicClubAdmin() {
         ))}
       </div>
       {isScannerOpen && <QRScanner onClose={() => setIsScannerOpen(false)} />}
+      {toast && (
+        <Toast 
+          message={toast.message} 
+          type={toast.type} 
+          onClose={() => setToast(null)} 
+        />
+      )}
     </div>
   );
 }

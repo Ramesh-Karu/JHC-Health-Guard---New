@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { collection, query, doc, setDoc, deleteDoc, onSnapshot, updateDoc } from 'firebase/firestore';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { db, auth, handleFirestoreError, OperationType } from '../firebase';
+import { initializeApp, deleteApp } from 'firebase/app';
+import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
+import { db, handleFirestoreError, OperationType } from '../firebase';
+import firebaseConfig from '../firebase-applet-config.json';
 import { Search, Plus, Trash2, FileDown, FileUp, X, UserPlus, Edit2 } from 'lucide-react';
 import { useAuth } from '../App';
 import Papa from 'papaparse';
 import { User } from '../types';
+import Toast from '../components/Toast';
 
 export default function UserManagement() {
   const { user } = useAuth();
@@ -15,6 +17,7 @@ export default function UserManagement() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -37,7 +40,13 @@ export default function UserManagement() {
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+      // Create a temporary secondary app instance
+      const tempApp = initializeApp(firebaseConfig, 'temp-create-user-' + Date.now());
+      const tempAuth = getAuth(tempApp);
+      
+      const userCredential = await createUserWithEmailAndPassword(tempAuth, formData.email, formData.password);
+      
+      // Create the user document
       await setDoc(doc(db, 'users', userCredential.user.uid), {
         email: formData.email,
         fullName: formData.fullName,
@@ -45,11 +54,16 @@ export default function UserManagement() {
         passwordChanged: false,
         createdAt: new Date().toISOString()
       });
+      
+      // Delete the temporary app
+      await deleteApp(tempApp);
+      
       setIsModalOpen(false);
       setFormData({ email: '', password: '', fullName: '', role: 'student' });
+      setToast({ message: 'User created successfully', type: 'success' });
     } catch (err) {
       console.error(err);
-      alert('Error creating user: ' + (err as Error).message);
+      setToast({ message: 'Error creating user', type: 'error' });
     }
   };
 
@@ -63,7 +77,9 @@ export default function UserManagement() {
       });
       setIsEditModalOpen(false);
       setEditingUser(null);
+      setToast({ message: 'User updated successfully', type: 'success' });
     } catch (err) {
+      setToast({ message: 'Error updating user', type: 'error' });
       handleFirestoreError(err, OperationType.UPDATE, 'users');
     }
   };
@@ -72,7 +88,9 @@ export default function UserManagement() {
     if (window.confirm('Are you sure you want to delete this user?')) {
       try {
         await deleteDoc(doc(db, 'users', userId));
+        setToast({ message: 'User deleted successfully', type: 'success' });
       } catch (err) {
+        setToast({ message: 'Error deleting user', type: 'error' });
         handleFirestoreError(err, OperationType.DELETE, 'users');
       }
     }
@@ -96,7 +114,12 @@ export default function UserManagement() {
         for (const row of results.data as any[]) {
           if (row.email && row.password) {
             try {
-              const userCredential = await createUserWithEmailAndPassword(auth, row.email, row.password);
+              // Create a temporary secondary app instance
+              const tempApp = initializeApp(firebaseConfig, 'temp-import-user-' + Date.now());
+              const tempAuth = getAuth(tempApp);
+              
+              const userCredential = await createUserWithEmailAndPassword(tempAuth, row.email, row.password);
+              
               await setDoc(doc(db, 'users', userCredential.user.uid), {
                 email: row.email,
                 fullName: row.fullName,
@@ -104,11 +127,16 @@ export default function UserManagement() {
                 passwordChanged: false,
                 createdAt: new Date().toISOString()
               });
+              
+              // Delete the temporary app
+              await deleteApp(tempApp);
             } catch (err) {
               console.error('Error importing user:', err);
+              setToast({ message: 'Error importing some users', type: 'error' });
             }
           }
         }
+        setToast({ message: 'CSV import completed successfully', type: 'success' });
       }
     });
   };
@@ -188,7 +216,7 @@ export default function UserManagement() {
             <h2 className="text-xl font-bold mb-6">Edit User</h2>
             <form onSubmit={handleEditUser} className="space-y-4">
               <input type="text" placeholder="Full Name" required value={editingUser.fullName} onChange={(e) => setEditingUser({...editingUser, fullName: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl" />
-              <select value={editingUser.role} onChange={(e) => setEditingUser({...editingUser, role: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl">
+              <select value={editingUser.role} onChange={(e) => setEditingUser({...editingUser, role: e.target.value as any})} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl">
                 <option value="student">Student</option>
                 <option value="teacher">Teacher</option>
                 <option value="coach">Coach</option>
@@ -203,6 +231,14 @@ export default function UserManagement() {
             </form>
           </motion.div>
         </div>
+      )}
+
+      {toast && (
+        <Toast 
+          message={toast.message} 
+          type={toast.type} 
+          onClose={() => setToast(null)} 
+        />
       )}
     </div>
   );

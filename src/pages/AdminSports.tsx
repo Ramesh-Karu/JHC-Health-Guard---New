@@ -4,6 +4,7 @@ import { collection, query, where, getDocs, addDoc, doc, deleteDoc } from 'fireb
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { Plus, Trash2, Users, UserPlus, Award } from 'lucide-react';
 import { useAuth } from '../App';
+import Toast from '../components/Toast';
 
 export default function AdminSports() {
   const [sports, setSports] = useState([]);
@@ -12,6 +13,7 @@ export default function AdminSports() {
   const [showAddSportModal, setShowAddSportModal] = useState(false);
   const [showAddCoachModal, setShowAddCoachModal] = useState(false);
   const [newSport, setNewSport] = useState('');
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [newCoach, setNewCoach] = useState({
     fullName: '',
     email: '',
@@ -60,6 +62,7 @@ export default function AdminSports() {
       await addDoc(collection(db, 'sports'), { name: newSport });
       setShowAddSportModal(false);
       setNewSport('');
+      setToast({ message: 'Sport added successfully', type: 'success' });
       fetchData();
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'sports');
@@ -78,6 +81,7 @@ export default function AdminSports() {
         createdAt: new Date().toISOString()
       });
       setShowAddCoachModal(false);
+      setToast({ message: 'Coach added successfully', type: 'success' });
       setNewCoach({ fullName: '', email: '', password: '', phone: '', indexNumber: '', sportsManaged: [] });
       fetchData();
     } catch (error) {
@@ -89,6 +93,7 @@ export default function AdminSports() {
     if (!confirm('Are you sure you want to delete this sport?')) return;
     try {
       await deleteDoc(doc(db, 'sports', id));
+      setToast({ message: 'Sport deleted successfully', type: 'success' });
       fetchData();
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `sports/${id}`);
@@ -185,6 +190,14 @@ export default function AdminSports() {
             </form>
           </motion.div>
         </div>
+      )}
+
+      {toast && (
+        <Toast 
+          message={toast.message} 
+          type={toast.type} 
+          onClose={() => setToast(null)} 
+        />
       )}
     </div>
   );

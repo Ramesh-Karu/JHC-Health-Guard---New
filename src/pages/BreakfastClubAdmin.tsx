@@ -5,6 +5,7 @@ import { useAuth } from '../App';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { QrCode } from 'lucide-react';
 import QRScanner from '../components/QRScanner';
+import Toast from '../components/Toast';
 
 export default function BreakfastClubAdmin() {
   const { user } = useAuth();
@@ -13,6 +14,7 @@ export default function BreakfastClubAdmin() {
   const [analytics, setAnalytics] = useState<any>({ totalReservations: 0, totalRevenue: 0, popularItems: [] });
   const [formData, setFormData] = useState({ name: '', imageUrl: '', description: '', price: 0, quantity: 0, sellingDate: '', category: '', nutritionInfo: '' });
   const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -63,8 +65,10 @@ export default function BreakfastClubAdmin() {
         createdAt: new Date().toISOString()
       });
       fetchData();
+      setToast({ message: 'Item added successfully', type: 'success' });
       setFormData({ name: '', imageUrl: '', description: '', price: 0, quantity: 0, sellingDate: '', category: '', nutritionInfo: '' });
     } catch (error) {
+      setToast({ message: 'Error adding item', type: 'error' });
       handleFirestoreError(error, OperationType.CREATE, 'breakfast_items');
     }
   };
@@ -74,8 +78,10 @@ export default function BreakfastClubAdmin() {
       await updateDoc(doc(db, 'breakfast_reservations', id), {
         status: 'Collected'
       });
+      setToast({ message: 'Reservation marked as collected', type: 'success' });
       fetchData();
     } catch (error) {
+      setToast({ message: 'Error marking reservation', type: 'error' });
       handleFirestoreError(error, OperationType.UPDATE, `breakfast_reservations/${id}`);
     }
   };
@@ -152,6 +158,13 @@ export default function BreakfastClubAdmin() {
         ))}
       </div>
       {isScannerOpen && <QRScanner onClose={() => setIsScannerOpen(false)} />}
+      {toast && (
+        <Toast 
+          message={toast.message} 
+          type={toast.type} 
+          onClose={() => setToast(null)} 
+        />
+      )}
     </div>
   );
 }

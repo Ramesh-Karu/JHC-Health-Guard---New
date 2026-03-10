@@ -26,6 +26,7 @@ import { useAuth } from '../App';
 import { useNavigate } from 'react-router-dom';
 import { User } from '../types';
 import Papa from 'papaparse';
+import Toast from '../components/Toast';
 
 export default function Students() {
   const { user } = useAuth();
@@ -36,6 +37,7 @@ export default function Students() {
   const [isHealthModalOpen, setIsHealthModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<User | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   // Form States
   const [formData, setFormData] = useState({
@@ -88,6 +90,7 @@ export default function Students() {
       });
       fetchStudents();
       setIsModalOpen(false);
+      setToast({ message: 'Student registered successfully!', type: 'success' });
       setFormData({
         username: '', password: '', fullName: '', indexNumber: '', dob: '',
         gender: 'Male', class: '', address: '', parentName: '', parentContact: '', photoUrl: ''
@@ -120,6 +123,7 @@ export default function Students() {
         createdAt: new Date().toISOString()
       });
       setIsHealthModalOpen(false);
+      setToast({ message: 'Health record added successfully!', type: 'success' });
       setHealthData({ height: '', weight: '', date: new Date().toISOString().split('T')[0] });
     } catch (err) {
       handleFirestoreError(err, OperationType.CREATE, 'health_records');
@@ -402,6 +406,14 @@ export default function Students() {
             </form>
           </motion.div>
         </div>
+      )}
+
+      {toast && (
+        <Toast 
+          message={toast.message} 
+          type={toast.type} 
+          onClose={() => setToast(null)} 
+        />
       )}
     </div>
   );

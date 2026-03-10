@@ -4,6 +4,7 @@ import { collection, query, where, getDocs, addDoc, doc, updateDoc, deleteDoc } 
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { Plus, Search, Edit2, Trash2, UserPlus } from 'lucide-react';
 import { useAuth } from '../App';
+import Toast from '../components/Toast';
 
 export default function AdminTeachers() {
   const [teachers, setTeachers] = useState([]);
@@ -11,6 +12,7 @@ export default function AdminTeachers() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState<any>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -63,6 +65,7 @@ export default function AdminTeachers() {
       
       setShowAddModal(false);
       setEditingTeacher(null);
+      setToast({ message: editingTeacher ? 'Teacher updated successfully' : 'Teacher added successfully', type: 'success' });
       setFormData({ fullName: '', email: '', password: '', class: '', division: '', phone: '', indexNumber: '' });
       fetchTeachers();
     } catch (error) {
@@ -75,6 +78,7 @@ export default function AdminTeachers() {
     
     try {
       await deleteDoc(doc(db, 'users', id));
+      setToast({ message: 'Teacher deleted successfully', type: 'success' });
       fetchTeachers();
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `users/${id}`);
@@ -289,6 +293,14 @@ export default function AdminTeachers() {
             </form>
           </motion.div>
         </div>
+      )}
+
+      {toast && (
+        <Toast 
+          message={toast.message} 
+          type={toast.type} 
+          onClose={() => setToast(null)} 
+        />
       )}
     </div>
   );
