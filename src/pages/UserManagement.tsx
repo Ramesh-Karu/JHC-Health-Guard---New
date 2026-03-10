@@ -3,7 +3,8 @@ import { motion } from 'motion/react';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { db, handleFirestoreError, OperationType } from '../firebase';
-import firebaseConfig from '../firebase-applet-config.json';
+import { collection, query, doc, setDoc, deleteDoc, onSnapshot, updateDoc } from 'firebase/firestore';
+import firebaseConfig from '../../firebase-applet-config.json';
 import { Search, Plus, Trash2, FileDown, FileUp, X, UserPlus, Edit2 } from 'lucide-react';
 import { useAuth } from '../App';
 import Papa from 'papaparse';
@@ -20,6 +21,7 @@ export default function UserManagement() {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [formData, setFormData] = useState({
     email: '',
+    username: '',
     password: '',
     fullName: '',
     role: 'student'
@@ -44,11 +46,14 @@ export default function UserManagement() {
       const tempApp = initializeApp(firebaseConfig, 'temp-create-user-' + Date.now());
       const tempAuth = getAuth(tempApp);
       
-      const userCredential = await createUserWithEmailAndPassword(tempAuth, formData.email, formData.password);
+      const systemEmail = `${formData.username}@school.internal`;
+      const userCredential = await createUserWithEmailAndPassword(tempAuth, systemEmail, formData.password);
       
       // Create the user document
       await setDoc(doc(db, 'users', userCredential.user.uid), {
         email: formData.email,
+        username: formData.username,
+        systemEmail: systemEmail,
         fullName: formData.fullName,
         role: formData.role,
         passwordChanged: false,
@@ -59,7 +64,7 @@ export default function UserManagement() {
       await deleteApp(tempApp);
       
       setIsModalOpen(false);
-      setFormData({ email: '', password: '', fullName: '', role: 'student' });
+      setFormData({ email: '', username: '', password: '', fullName: '', role: 'student' });
       setToast({ message: 'User created successfully', type: 'success' });
     } catch (err) {
       console.error(err);
@@ -191,6 +196,7 @@ export default function UserManagement() {
             <h2 className="text-xl font-bold mb-6">Add New User</h2>
             <form onSubmit={handleCreateUser} className="space-y-4">
               <input type="text" placeholder="Full Name" required value={formData.fullName} onChange={(e) => setFormData({...formData, fullName: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl" />
+              <input type="text" placeholder="Username" required value={formData.username} onChange={(e) => setFormData({...formData, username: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl" />
               <input type="email" placeholder="Email" required value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl" />
               <input type="password" placeholder="Password" required value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl" />
               <select value={formData.role} onChange={(e) => setFormData({...formData, role: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl">

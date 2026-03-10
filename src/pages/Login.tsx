@@ -1,39 +1,50 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { Heart, Lock, Mail, ChevronRight, AlertCircle, ArrowLeft } from 'lucide-react';
+import { Heart, Lock, User, ChevronRight, AlertCircle, ArrowLeft } from 'lucide-react';
 import { signInWithPopup, GoogleAuthProvider, signInWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '../firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, query, collection, where, getDocs } from 'firebase/firestore';
 import { useAuth } from '../App';
 
 export default function Login() {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  const handleEmailLogin = async (e: React.FormEvent) => {
+  const handleUsernameLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
-      const result = await signInWithEmailAndPassword(auth, email, password);
-      const userDoc = await getDoc(doc(db, 'users', result.user.uid));
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        login({ ...userData, id: result.user.uid });
-        if (userData.role === 'student' && userData.passwordChanged === false) navigate('/change-password');
-        else if (userData.role === 'teacher') navigate('/teacher/dashboard');
-        else if (userData.role === 'coach') navigate('/coach/dashboard');
-        else if (userData.role === 'organic-admin') navigate('/organic-admin-dashboard');
-        else if (userData.role === 'breakfast-admin') navigate('/breakfast-admin-dashboard');
-        else navigate('/dashboard');
+      // 1. Find user by username
+      const q = query(collection(db, 'users'), where('username', '==', username));
+      const snapshot = await getDocs(q);
+      
+      if (snapshot.empty) {
+        setError('Invalid username or password.');
+        return;
       }
+      
+      const userDoc = snapshot.docs[0];
+      const userData = userDoc.data();
+      
+      // 2. Use systemEmail to sign in
+      const result = await signInWithEmailAndPassword(auth, userData.systemEmail, password);
+      
+      login({ ...userData, id: result.user.uid });
+      
+      if (userData.role === 'student' && userData.passwordChanged === false) navigate('/change-password');
+      else if (userData.role === 'teacher') navigate('/teacher/dashboard');
+      else if (userData.role === 'coach') navigate('/coach/dashboard');
+      else if (userData.role === 'organic-admin') navigate('/organic-admin-dashboard');
+      else if (userData.role === 'breakfast-admin') navigate('/breakfast-admin-dashboard');
+      else navigate('/dashboard');
     } catch (err) {
-      setError('Invalid email or password.');
+      setError('Invalid username or password.');
     } finally {
       setLoading(false);
     }
@@ -117,15 +128,21 @@ export default function Login() {
         >
           <h2 className="text-xl font-bold text-slate-900 mb-6 text-center">Welcome Back</h2>
           
-          <form onSubmit={handleEmailLogin} className="space-y-4">
+          <form onSubmit={handleUsernameLogin} className="space-y-4">
             {error && (
               <div className="flex items-center gap-2 text-red-500 bg-red-50 p-3 rounded-xl text-sm">
                 <AlertCircle size={16} />
                 <span>{error}</span>
               </div>
             )}
-            <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl" required />
-            <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl" required />
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <input type="text" placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl" required />
+            </div>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl" required />
+            </div>
             <button type="submit" disabled={loading} className="w-full bg-blue-500 text-white font-bold py-3 rounded-xl hover:bg-blue-600">Sign In</button>
           </form>
 
