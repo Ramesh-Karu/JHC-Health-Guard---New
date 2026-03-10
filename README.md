@@ -1,20 +1,10 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# JHC Health Guard
 
-# Run and deploy your AI Studio app
+A comprehensive platform for monitoring student health, tracking fitness, and promoting healthy habits at Jaffna Hindu College.
 
-This contains everything you need to run your app locally.
-
-View your app in AI Studio: https://ai.studio/apps/91a8da38-0334-4080-8eb1-bbe40e30462c
-
-## Run Locally
-
-**Prerequisites:**  Node.js
-
-
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## Features
+- Student health monitoring
+- Fitness tracking
+- QR-based student identification
+- Secure login system
+- Analytics and gamification
