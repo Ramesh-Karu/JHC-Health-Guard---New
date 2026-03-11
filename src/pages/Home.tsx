@@ -765,11 +765,13 @@ export default function Home() {
             ) : scannedStudent ? (
               <div className="p-8">
                 <div className="flex items-center gap-6 mb-8 border-b border-slate-100 pb-8">
-                  <img 
-                    src={scannedStudent.photoUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${scannedStudent.username}`} 
-                    alt={scannedStudent.fullName}
-                    className="w-24 h-24 rounded-2xl object-cover shadow-lg"
-                  />
+                  <div className="w-24 h-24 rounded-2xl overflow-hidden shadow-lg bg-white border border-slate-100">
+                    <img 
+                      src="https://upload.wikimedia.org/wikipedia/en/5/5e/Jaffna_Hindu_College_Logo.png" 
+                      alt={scannedStudent.fullName}
+                      className="w-full h-full object-contain p-2"
+                    />
+                  </div>
                   <div>
                     <h2 className="text-3xl font-bold text-slate-900 mb-2">{scannedStudent.fullName}</h2>
                     <div className="flex flex-wrap gap-4 text-slate-600">

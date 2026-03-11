@@ -192,11 +192,11 @@ export default function HealthPassport() {
         <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-[40px] p-6 md:p-12 text-white shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
           <div className="relative z-10 flex flex-col md:flex-row gap-8 items-center md:items-start">
-            <div className="w-32 h-32 md:w-40 md:h-40 rounded-[32px] border-4 border-white/20 overflow-hidden shadow-2xl flex-shrink-0">
+            <div className="w-32 h-32 md:w-40 md:h-40 rounded-[32px] border-4 border-white/20 overflow-hidden shadow-2xl flex-shrink-0 bg-white">
               <img 
-                src={student?.photoUrl || `https://picsum.photos/seed/${student?.username}/400/400`} 
+                src="https://upload.wikimedia.org/wikipedia/en/5/5e/Jaffna_Hindu_College_Logo.png" 
                 alt={student?.fullName} 
-                className="w-full h-full object-cover"
+                className="w-full h-full object-contain p-2"
                 referrerPolicy="no-referrer"
               />
             </div>

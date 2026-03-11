@@ -16,11 +16,11 @@ export const HealthPassportCard = React.forwardRef<HTMLDivElement, Props>(({ stu
       
       <div className="relative z-10 flex gap-6 h-full">
         <div className="w-40 h-full flex flex-col items-center justify-center gap-4">
-          <div className="w-32 h-32 rounded-3xl border-4 border-white/20 overflow-hidden shadow-2xl bg-white/10">
+          <div className="w-32 h-32 rounded-3xl border-4 border-white/20 overflow-hidden shadow-2xl bg-white">
             <img 
-              src={student?.photoUrl || `https://picsum.photos/seed/${student?.username}/400/400`} 
+              src="https://upload.wikimedia.org/wikipedia/en/5/5e/Jaffna_Hindu_College_Logo.png" 
               alt={student?.fullName} 
-              className="w-full h-full object-cover"
+              className="w-full h-full object-contain p-2"
               referrerPolicy="no-referrer"
             />
           </div>
