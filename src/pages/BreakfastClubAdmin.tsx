@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs, addDoc, updateDoc, doc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { useAuth } from '../App';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -86,6 +86,27 @@ export default function BreakfastClubAdmin() {
     }
   };
 
+  const deleteItem = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this item?')) return;
+    try {
+      await deleteDoc(doc(db, 'breakfast_items', id));
+      fetchData();
+      setToast({ message: 'Item deleted successfully', type: 'success' });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `breakfast_items/${id}`);
+    }
+  };
+
+  const editItem = async (id: string, updatedData: any) => {
+    try {
+      await updateDoc(doc(db, 'breakfast_items', id), updatedData);
+      fetchData();
+      setToast({ message: 'Item updated successfully', type: 'success' });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `breakfast_items/${id}`);
+    }
+  };
+
   return (
     <div className="p-8 max-w-6xl mx-auto space-y-8">
       <div className="flex justify-between items-center">
@@ -129,18 +150,20 @@ export default function BreakfastClubAdmin() {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border p-6">
-        <h2 className="text-xl font-bold mb-4">Add New Breakfast Item</h2>
-        <form onSubmit={addItem} className="grid grid-cols-2 gap-4">
-          <input placeholder="Name" onChange={e => setFormData({...formData, name: e.target.value})} className="p-2 border rounded-xl" />
-          <input placeholder="Image URL" onChange={e => setFormData({...formData, imageUrl: e.target.value})} className="p-2 border rounded-xl" />
-          <input placeholder="Price (Rs)" type="number" onChange={e => setFormData({...formData, price: Number(e.target.value)})} className="p-2 border rounded-xl" />
-          <input placeholder="Quantity" type="number" onChange={e => setFormData({...formData, quantity: Number(e.target.value)})} className="p-2 border rounded-xl" />
-          <input placeholder="Selling Date (YYYY-MM-DD)" onChange={e => setFormData({...formData, sellingDate: e.target.value})} className="p-2 border rounded-xl" />
-          <input placeholder="Category" onChange={e => setFormData({...formData, category: e.target.value})} className="p-2 border rounded-xl" />
-          <input placeholder="Nutrition Info" onChange={e => setFormData({...formData, nutritionInfo: e.target.value})} className="p-2 border rounded-xl col-span-2" />
-          <button type="submit" className="bg-blue-500 text-white py-2 rounded-xl col-span-2">Add Item</button>
-        </form>
+      <div className="bg-white rounded-2xl shadow-sm border p-6 mb-8">
+        <h2 className="text-xl font-bold mb-4">Breakfast Items</h2>
+        {items.map((i: any) => (
+          <div key={i.id} className="flex items-center justify-between py-3 border-b">
+            <div>
+              <h3 className="font-bold">{i.name}</h3>
+              <p className="text-sm text-slate-500">Rs {i.price} | {i.quantity} units</p>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => editItem(i.id, { ...i, price: i.price + 10 })} className="text-blue-500">Edit</button>
+              <button onClick={() => deleteItem(i.id)} className="text-red-500">Delete</button>
+            </div>
+          </div>
+        ))}
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border p-6">

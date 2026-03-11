@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { collection, query, where, getDocs, addDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, deleteDoc, doc } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
+import Papa from 'papaparse';
+import * as XLSX from 'xlsx';
+import { initializeApp, deleteApp } from 'firebase/app';
+import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
+import firebaseConfig from '../../firebase-applet-config.json';
 import { 
   Search, 
   Plus, 
@@ -25,7 +30,6 @@ import {
 import { useAuth } from '../App';
 import { useNavigate } from 'react-router-dom';
 import { User } from '../types';
-import Papa from 'papaparse';
 import Toast from '../components/Toast';
 
 export default function Students() {
@@ -48,6 +52,7 @@ export default function Students() {
     dob: '',
     gender: 'Male',
     class: '',
+    division: '',
     address: '',
     parentName: '',
     parentContact: '',
@@ -93,7 +98,7 @@ export default function Students() {
       setToast({ message: 'Student registered successfully!', type: 'success' });
       setFormData({
         username: '', password: '', fullName: '', indexNumber: '', dob: '',
-        gender: 'Male', class: '', address: '', parentName: '', parentContact: '', photoUrl: ''
+        gender: 'Male', class: '', division: '', address: '', parentName: '', parentContact: '', photoUrl: ''
       });
     } catch (err) {
       handleFirestoreError(err, OperationType.CREATE, 'users');
@@ -131,12 +136,91 @@ export default function Students() {
   };
 
   const handleExportCSV = () => {
-    const csv = Papa.unparse(students);
+    const dataToExport = students.map(s => ({
+      username: s.username,
+      fullName: s.fullName,
+      email: s.email,
+      indexNumber: s.indexNumber,
+      class: s.class,
+      division: s.division,
+      password: '' // Blank password for template
+    }));
+    const csv = Papa.unparse(dataToExport);
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = 'students.csv';
     link.click();
+  };
+
+  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const data = event.target?.result;
+      let studentsToImport: any[] = [];
+
+      if (file.name.endsWith('.csv')) {
+        Papa.parse(data as string, {
+          header: true,
+          complete: (results) => { studentsToImport = results.data; }
+        });
+      } else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+        const workbook = XLSX.read(data, { type: 'binary' });
+        const sheetName = workbook.SheetNames[0];
+        studentsToImport = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+      }
+
+      for (const row of studentsToImport) {
+        if (row.username && row.fullName && row.password) {
+          try {
+            const tempApp = initializeApp(firebaseConfig as any, 'temp-import-student-' + Date.now());
+            const tempAuth = getAuth(tempApp);
+            
+            const systemEmail = `${row.username}@school.internal`;
+            const userCredential = await createUserWithEmailAndPassword(tempAuth, systemEmail, row.password);
+            
+            await addDoc(collection(db, 'users'), {
+              email: row.email || '',
+              username: row.username,
+              systemEmail: systemEmail,
+              fullName: row.fullName,
+              indexNumber: row.indexNumber || '',
+              class: row.class || '',
+              division: row.division || '',
+              role: 'student',
+              passwordChanged: false,
+              profileCompleted: false,
+              points: 0,
+              createdAt: new Date().toISOString()
+            });
+            
+            await deleteApp(tempApp);
+          } catch (err) {
+            console.error('Error importing student:', err);
+          }
+        }
+      }
+      fetchStudents();
+      setToast({ message: 'Import completed', type: 'success' });
+    };
+    
+    if (file.name.endsWith('.csv')) reader.readAsText(file);
+    else reader.readAsBinaryString(file);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this student?')) return;
+    
+    try {
+      await deleteDoc(doc(db, 'users', id));
+      setToast({ message: 'Student deleted successfully', type: 'success' });
+      fetchStudents();
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `users/${id}`);
+    }
   };
 
   const filteredStudents = students.filter(s => 
@@ -159,6 +243,11 @@ export default function Students() {
             <FileDown size={18} />
             Export
           </button>
+          <label className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-700 font-bold hover:bg-slate-50 transition-all shadow-sm cursor-pointer">
+            <FileUp size={18} />
+            Import
+            <input type="file" accept=".csv, .xlsx, .xls" onChange={handleImportFile} className="hidden" />
+          </label>
           <button 
             onClick={() => setIsModalOpen(true)}
             className="flex items-center gap-2 px-4 py-2.5 bg-blue-500 text-white rounded-xl font-bold hover:bg-blue-600 transition-all shadow-lg shadow-blue-200"
@@ -222,6 +311,9 @@ export default function Students() {
                   <td className="px-6 py-4">
                     <span className="px-2.5 py-1 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold">{student.class}</span>
                   </td>
+                  <td className="px-6 py-4">
+                    <span className="px-2.5 py-1 bg-green-50 text-green-600 rounded-lg text-xs font-bold">{student.division}</span>
+                  </td>
                   <td className="px-6 py-4 text-sm text-slate-600">{student.gender}</td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-1 text-blue-600 font-bold">
@@ -248,7 +340,7 @@ export default function Students() {
                       <button className="p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors">
                         <Edit size={18} />
                       </button>
-                      <button className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-colors">
+                      <button onClick={() => handleDelete(student.id)} className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-colors">
                         <Trash2 size={18} />
                       </button>
                     </div>
@@ -333,6 +425,16 @@ export default function Students() {
                     required
                     value={formData.class}
                     onChange={(e) => setFormData({...formData, class: e.target.value})}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700">Division</label>
+                  <input 
+                    type="text" 
+                    required
+                    value={formData.division}
+                    onChange={(e) => setFormData({...formData, division: e.target.value})}
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                 </div>

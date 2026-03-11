@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://jhchealthguard.site/sitemap.xml

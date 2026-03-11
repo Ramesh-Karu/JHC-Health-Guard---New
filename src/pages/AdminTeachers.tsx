@@ -2,7 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { collection, query, where, getDocs, addDoc, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
-import { Plus, Search, Edit2, Trash2, UserPlus } from 'lucide-react';
+import Papa from 'papaparse';
+import * as XLSX from 'xlsx';
+import { initializeApp, deleteApp } from 'firebase/app';
+import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
+import firebaseConfig from '../../firebase-applet-config.json';
+import { Plus, Search, Edit2, Trash2, UserPlus, FileDown, FileUp } from 'lucide-react';
 import { useAuth } from '../App';
 import Toast from '../components/Toast';
 
@@ -73,6 +78,77 @@ export default function AdminTeachers() {
     }
   };
 
+  const handleExportCSV = () => {
+    const dataToExport = teachers.map((t: any) => ({
+      fullName: t.fullName,
+      email: t.email,
+      class: t.class || '',
+      division: t.division || '',
+      phone: t.phone || '',
+      indexNumber: t.indexNumber || '',
+      password: '' // Blank password for template
+    }));
+    const csv = Papa.unparse(dataToExport);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'teachers.csv';
+    link.click();
+  };
+
+  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const data = event.target?.result;
+      let teachersToImport: any[] = [];
+
+      if (file.name.endsWith('.csv')) {
+        Papa.parse(data as string, {
+          header: true,
+          complete: (results) => { teachersToImport = results.data; }
+        });
+      } else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+        const workbook = XLSX.read(data, { type: 'binary' });
+        const sheetName = workbook.SheetNames[0];
+        teachersToImport = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+      }
+
+      for (const row of teachersToImport) {
+        if (row.email && row.fullName && row.password) {
+          try {
+            const tempApp = initializeApp(firebaseConfig as any, 'temp-import-teacher-' + Date.now());
+            const tempAuth = getAuth(tempApp);
+            
+            const userCredential = await createUserWithEmailAndPassword(tempAuth, row.email, row.password);
+            
+            await addDoc(collection(db, 'users'), {
+              fullName: row.fullName,
+              email: row.email,
+              class: row.class || '',
+              division: row.division || '',
+              phone: row.phone || '',
+              indexNumber: row.indexNumber || '',
+              role: 'teacher',
+              createdAt: new Date().toISOString()
+            });
+            
+            await deleteApp(tempApp);
+          } catch (err) {
+            console.error('Error importing teacher:', err);
+          }
+        }
+      }
+      fetchTeachers();
+      setToast({ message: 'Import completed', type: 'success' });
+    };
+    
+    if (file.name.endsWith('.csv')) reader.readAsText(file);
+    else reader.readAsBinaryString(file);
+  };
+
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this teacher?')) return;
     
@@ -112,13 +188,23 @@ export default function AdminTeachers() {
           <h1 className="text-3xl font-bold text-slate-900">Manage Teachers</h1>
           <p className="text-slate-500 mt-1">Add and assign teachers to classes</p>
         </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-xl hover:bg-blue-600 transition-colors"
-        >
-          <UserPlus size={20} />
-          Add Teacher
-        </button>
+        <div className="flex gap-3">
+          <button onClick={handleExportCSV} className="flex items-center gap-2 bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-xl hover:bg-slate-50 transition-colors">
+            <FileDown size={20} /> Export
+          </button>
+          <label className="flex items-center gap-2 bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer">
+            <FileUp size={20} />
+            Import
+            <input type="file" accept=".csv, .xlsx, .xls" onChange={handleImportFile} className="hidden" />
+          </label>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-xl hover:bg-blue-600 transition-colors"
+          >
+            <UserPlus size={20} />
+            Add Teacher
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">

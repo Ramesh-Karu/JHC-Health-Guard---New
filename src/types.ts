@@ -12,6 +12,7 @@ export interface User {
   dob?: string;
   gender?: string;
   class?: string;
+  division?: string;
   address?: string;
   parentName?: string;
   parentContact?: string;

@@ -105,9 +105,10 @@ import AdminHealthUpdate from './pages/AdminHealthUpdate';
 import StudentTracking from './pages/StudentTracking';
 import DeveloperMenu from './components/DeveloperMenu';
 
-const SidebarItem = ({ icon: Icon, label, path }: any) => (
+const SidebarItem = ({ icon: Icon, label, path, onClick }: any) => (
   <NavLink
     to={path}
+    onClick={onClick}
     className={({ isActive }) => cn(
       "flex items-center w-full gap-3 px-4 py-3 rounded-xl transition-all duration-200 group",
       isActive 
@@ -128,7 +129,25 @@ const SidebarItem = ({ icon: Icon, label, path }: any) => (
 const Layout = () => {
   const { user, logout } = useAuth();
   const location = useLocation();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth > 768);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth > 768) {
+        setIsSidebarOpen(true);
+      } else {
+        setIsSidebarOpen(false);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const handleSidebarItemClick = () => {
+    if (window.innerWidth <= 768) {
+      setIsSidebarOpen(false);
+    }
+  };
 
   const menuItems = [
     { icon: LayoutDashboard, label: 'Organic Admin Dashboard', path: '/organic-admin-dashboard', roles: ['organic-admin'] },
@@ -172,18 +191,30 @@ const Layout = () => {
   const filteredItems = menuItems.filter(item => item.roles.includes(user?.role || 'student'));
 
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">
+    <div className="flex h-screen bg-slate-50 overflow-hidden font-sans relative">
+      {/* Mobile Sidebar Overlay */}
+      <AnimatePresence>
+        {isSidebarOpen && window.innerWidth <= 768 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setIsSidebarOpen(false)}
+            className="fixed inset-0 bg-slate-900/50 z-20 md:hidden"
+          />
+        )}
+      </AnimatePresence>
+
       {/* Sidebar */}
       <motion.aside
         initial={false}
         animate={{ 
           width: isSidebarOpen ? 280 : 0, 
           opacity: isSidebarOpen ? 1 : 0,
-          marginRight: isSidebarOpen ? 0 : -20
         }}
         transition={{ duration: 0.3, ease: "easeInOut" }}
         className={cn(
-          "bg-white border-r border-slate-200 flex-shrink-0 z-20 overflow-hidden relative",
+          "bg-white border-r border-slate-200 flex-shrink-0 z-30 overflow-hidden absolute md:relative h-full",
           !isSidebarOpen && "border-none"
         )}
       >
@@ -203,6 +234,7 @@ const Layout = () => {
               <SidebarItem
                 key={item.path}
                 {...item}
+                onClick={handleSidebarItemClick}
               />
             ))}
           </nav>
