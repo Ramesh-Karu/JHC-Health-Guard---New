@@ -72,18 +72,16 @@ export default function HealthPassport() {
 
   useEffect(() => {
     const fetchData = async () => {
-      const targetId = id || user?.id;
+      const targetId = id;
       if (!targetId) return;
 
       try {
-        let profile = user;
+        let profile = null;
         
-        // If admin is viewing another student
-        if (user?.role === 'admin' && id) {
-          const studentDoc = await getDoc(doc(db, 'users', id));
-          if (studentDoc.exists()) {
-            profile = { id: studentDoc.id, ...studentDoc.data() } as any;
-          }
+        // Fetch student profile
+        const studentDoc = await getDoc(doc(db, 'users', targetId));
+        if (studentDoc.exists()) {
+          profile = { id: studentDoc.id, ...studentDoc.data() } as any;
         }
         
         setStudent(profile);
@@ -109,8 +107,10 @@ export default function HealthPassport() {
         setActivities(activityData);
 
         // AI Analysis
-        const analysis = await analyzeStudentHealth(profile, history, activityData);
-        setAiAnalysis(analysis);
+        if (profile) {
+          const analysis = await analyzeStudentHealth(profile, history, activityData);
+          setAiAnalysis(analysis);
+        }
 
       } catch (err) {
         handleFirestoreError(err, OperationType.GET, 'users/health_records/activities');
@@ -119,10 +119,8 @@ export default function HealthPassport() {
       }
     };
 
-    if (user) {
-      fetchData();
-    }
-  }, [id, user]);
+    fetchData();
+  }, [id]);
 
   if (loading) return (
     <div className="flex items-center justify-center h-[60vh]">

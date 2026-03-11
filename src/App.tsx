@@ -422,9 +422,10 @@ export default function App() {
             <Route path="/queries" element={<Queries />} />
             <Route path="/ai-insights" element={<AIInsights />} />
             <Route path="/health-passport" element={<HealthPassport />} />
-            <Route path="/health-passport/:id" element={<HealthPassport />} />
             <Route path="/health-records" element={<HealthRecords />} />
           </Route>
+          
+          <Route path="/health-passport/:id" element={<HealthPassport />} />
 
           <Route element={<ProtectedRoute allowedRoles={['admin', 'student', 'teacher']} />}>
             <Route path="/profile" element={<Profile />} />

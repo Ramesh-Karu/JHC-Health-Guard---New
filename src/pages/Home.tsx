@@ -209,7 +209,7 @@ export default function Home() {
                 className="px-8 py-4 bg-white/30 backdrop-blur-md text-slate-900 border border-white/50 rounded-2xl font-bold hover:bg-white/50 transition-all shadow-lg shadow-slate-200/20 flex items-center gap-3"
               >
                 <QrCode size={20} />
-                Scan Passbook
+                Passport
               </button>
               <button 
                 onClick={() => navigate('/login')}
