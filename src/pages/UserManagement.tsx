@@ -103,7 +103,8 @@ export default function UserManagement() {
         await deleteDoc(doc(db, 'users', userId));
         setToast({ message: 'User deleted successfully', type: 'success' });
       } catch (err) {
-        setToast({ message: 'Error deleting user', type: 'error' });
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+        setToast({ message: `Error deleting user: ${errorMessage}`, type: 'error' });
         handleFirestoreError(err, OperationType.DELETE, 'users');
       }
     }

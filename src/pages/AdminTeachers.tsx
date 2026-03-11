@@ -157,6 +157,8 @@ export default function AdminTeachers() {
       setToast({ message: 'Teacher deleted successfully', type: 'success' });
       fetchTeachers();
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      setToast({ message: `Error deleting teacher: ${errorMessage}`, type: 'error' });
       handleFirestoreError(error, OperationType.DELETE, `users/${id}`);
     }
   };

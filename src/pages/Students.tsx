@@ -219,6 +219,8 @@ export default function Students() {
       setToast({ message: 'Student deleted successfully', type: 'success' });
       fetchStudents();
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      setToast({ message: `Error deleting student: ${errorMessage}`, type: 'error' });
       handleFirestoreError(error, OperationType.DELETE, `users/${id}`);
     }
   };
@@ -435,6 +437,19 @@ export default function Students() {
                     required
                     value={formData.division}
                     onChange={(e) => setFormData({...formData, division: e.target.value})}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700">Profile Photo</label>
+                  <input 
+                    type="file" 
+                    accept="image/*"
+                    onChange={(e) => {
+                      // Handle file upload logic here (e.g., upload to Firebase Storage)
+                      // For now, we'll just set a placeholder or handle it later
+                      console.log(e.target.files?.[0]);
+                    }}
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                 </div>
