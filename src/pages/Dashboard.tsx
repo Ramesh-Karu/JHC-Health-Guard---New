@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
+import { Skeleton } from '../components/Skeleton';
 import { 
   Users, 
   Activity, 
@@ -197,7 +198,18 @@ export default function Dashboard() {
     fetchData();
   }, [user]);
 
-  if (loading) return <div className="flex items-center justify-center h-64">Loading...</div>;
+  if (loading) return (
+    <div className="space-y-8 px-4">
+      <div className="h-16 w-64 bg-slate-200 animate-pulse rounded-xl" />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-32" />)}
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <Skeleton className="h-96" />
+        <Skeleton className="h-96" />
+      </div>
+    </div>
+  );
 
   if (user?.role === 'admin') {
     const COLORS = ['#3b82f6', '#6366f1', '#f59e0b', '#ef4444'];

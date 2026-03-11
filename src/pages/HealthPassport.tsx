@@ -39,6 +39,7 @@ import {
 } from 'recharts';
 import { analyzeStudentHealth, AIAnalysisResult } from '../services/aiService';
 import { HealthPassportCard } from '../components/HealthPassportCard';
+import { Skeleton } from '../components/Skeleton';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -123,8 +124,27 @@ export default function HealthPassport() {
   }, [id]);
 
   if (loading) return (
-    <div className="flex items-center justify-center h-[60vh]">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+    <div className="space-y-8 pb-12 px-4">
+      <div className="flex items-center justify-between">
+        <Skeleton className="h-10 w-64" />
+        <div className="flex gap-3">
+          <Skeleton className="h-10 w-32" />
+          <Skeleton className="h-10 w-32" />
+        </div>
+      </div>
+      <Skeleton className="h-64 w-full rounded-[40px]" />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[1, 2, 3].map(i => <Skeleton key={i} className="h-32" />)}
+          </div>
+          <Skeleton className="h-80" />
+          <Skeleton className="h-80" />
+        </div>
+        <div className="space-y-8">
+          {[1, 2, 3].map(i => <Skeleton key={i} className="h-64" />)}
+        </div>
+      </div>
     </div>
   );
 
