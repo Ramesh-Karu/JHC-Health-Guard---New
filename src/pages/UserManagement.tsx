@@ -55,12 +55,13 @@ export default function UserManagement() {
       const tempApp = initializeApp(firebaseConfig, 'temp-create-user-' + Date.now());
       const tempAuth = getAuth(tempApp);
       
-      const systemEmail = `${formData.username}@school.internal`;
+      const normalizedUsername = formData.username.toLowerCase().trim();
+      const systemEmail = `${normalizedUsername}@school.internal`;
       const userCredential = await createUserWithEmailAndPassword(tempAuth, systemEmail, formData.password);
       
       await setDoc(doc(db, 'users', userCredential.user.uid), {
         email: formData.email,
-        username: formData.username,
+        username: normalizedUsername,
         systemEmail: systemEmail,
         fullName: formData.fullName,
         role: formData.role,
@@ -74,9 +75,16 @@ export default function UserManagement() {
       setIsModalOpen(false);
       setFormData({ email: '', username: '', password: '', fullName: '', role: 'student' });
       setToast({ message: 'User created successfully', type: 'success' });
-    } catch (err) {
-      console.error(err);
-      setToast({ message: 'Error creating user', type: 'error' });
+    } catch (err: any) {
+      console.error("Error creating user:", err);
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+      if (errorMessage.includes('auth/email-already-in-use')) {
+        setToast({ message: 'Username or email is already taken.', type: 'error' });
+      } else if (errorMessage.includes('auth/weak-password')) {
+        setToast({ message: 'Password should be at least 6 characters.', type: 'error' });
+      } else {
+        setToast({ message: 'Error creating user. Please try again.', type: 'error' });
+      }
     }
   };
 
@@ -145,12 +153,13 @@ export default function UserManagement() {
             const tempApp = initializeApp(firebaseConfig, 'temp-import-user-' + Date.now());
             const tempAuth = getAuth(tempApp);
             
-            const systemEmail = `${row.username}@school.internal`;
+            const normalizedUsername = row.username.toLowerCase().trim();
+            const systemEmail = `${normalizedUsername}@school.internal`;
             const userCredential = await createUserWithEmailAndPassword(tempAuth, systemEmail, row.password);
             
             await setDoc(doc(db, 'users', userCredential.user.uid), {
               email: row.email || '',
-              username: row.username,
+              username: normalizedUsername,
               systemEmail: systemEmail,
               fullName: row.fullName,
               role: row.role || 'student',

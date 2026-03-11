@@ -3,7 +3,7 @@ import { Html5QrcodeScanner } from 'html5-qrcode';
 import { useNavigate } from 'react-router-dom';
 import { X } from 'lucide-react';
 
-export default function QRScanner({ onClose }: { onClose: () => void }) {
+export default function QRScanner({ onClose, onScan }: { onClose: () => void, onScan?: (text: string) => void }) {
   const scannerRef = useRef<Html5QrcodeScanner | null>(null);
   const navigate = useNavigate();
 
@@ -18,11 +18,15 @@ export default function QRScanner({ onClose }: { onClose: () => void }) {
       (decodedText) => {
         scanner.clear();
         onClose();
-        // Assuming the QR code contains the full URL or just the path
-        if (decodedText.startsWith('http')) {
-          window.location.href = decodedText;
+        if (onScan) {
+          onScan(decodedText);
         } else {
-          navigate(decodedText);
+          // Assuming the QR code contains the full URL or just the path
+          if (decodedText.startsWith('http')) {
+            window.location.href = decodedText;
+          } else {
+            navigate(decodedText);
+          }
         }
       },
       (error) => {

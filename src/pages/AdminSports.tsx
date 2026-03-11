@@ -95,8 +95,16 @@ export default function AdminSports() {
       setToast({ message: 'Coach added successfully', type: 'success' });
       setNewCoach({ fullName: '', email: '', password: '', phone: '', indexNumber: '', sportsManaged: [] });
       fetchData();
-    } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'users');
+    } catch (err: any) {
+      console.error("Error adding coach:", err);
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+      if (errorMessage.includes('auth/email-already-in-use')) {
+        setToast({ message: 'Email is already taken.', type: 'error' });
+      } else if (errorMessage.includes('auth/weak-password')) {
+        setToast({ message: 'Password should be at least 6 characters.', type: 'error' });
+      } else {
+        setToast({ message: 'Failed to add coach. Please try again.', type: 'error' });
+      }
     }
   };
 

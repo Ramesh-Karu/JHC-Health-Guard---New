@@ -102,11 +102,13 @@ export default function Students() {
         const tempApp = initializeApp(firebaseConfig as any, 'temp-create-student-' + Date.now());
         const tempAuth = getAuth(tempApp);
         
-        const systemEmail = `${formData.username}@school.internal`;
+        const normalizedUsername = formData.username.toLowerCase().trim();
+        const systemEmail = `${normalizedUsername}@school.internal`;
         const userCredential = await createUserWithEmailAndPassword(tempAuth, systemEmail, formData.password);
         
         await setDoc(doc(db, 'users', userCredential.user.uid), {
           ...formData,
+          username: normalizedUsername,
           systemEmail: systemEmail,
           role: 'student',
           passwordChanged: false,
@@ -126,8 +128,16 @@ export default function Students() {
         username: '', password: '', fullName: '', indexNumber: '', dob: '',
         gender: 'Male', class: '', division: '', address: '', parentName: '', parentContact: '', photoUrl: ''
       });
-    } catch (err) {
-      handleFirestoreError(err, editingStudent ? OperationType.UPDATE : OperationType.CREATE, 'users');
+    } catch (err: any) {
+      console.error("Error saving student:", err);
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+      if (errorMessage.includes('auth/email-already-in-use')) {
+        setToast({ message: 'Username is already taken.', type: 'error' });
+      } else if (errorMessage.includes('auth/weak-password')) {
+        setToast({ message: 'Password should be at least 6 characters.', type: 'error' });
+      } else {
+        setToast({ message: 'Failed to save student. Please try again.', type: 'error' });
+      }
     }
   };
 
@@ -224,12 +234,13 @@ export default function Students() {
             const tempApp = initializeApp(firebaseConfig as any, 'temp-import-student-' + Date.now());
             const tempAuth = getAuth(tempApp);
             
-            const systemEmail = `${row.username}@school.internal`;
+            const normalizedUsername = row.username.toLowerCase().trim();
+            const systemEmail = `${normalizedUsername}@school.internal`;
             const userCredential = await createUserWithEmailAndPassword(tempAuth, systemEmail, row.password);
             
             await setDoc(doc(db, 'users', userCredential.user.uid), {
               email: row.email || '',
-              username: row.username,
+              username: normalizedUsername,
               systemEmail: systemEmail,
               fullName: row.fullName,
               indexNumber: row.indexNumber || '',
@@ -450,16 +461,18 @@ export default function Students() {
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none disabled:opacity-50"
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700">Password {editingStudent && '(Leave blank to keep current)'}</label>
-                  <input 
-                    type="password" 
-                    required={!editingStudent}
-                    value={formData.password}
-                    onChange={(e) => setFormData({...formData, password: e.target.value})}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
-                </div>
+                {!editingStudent && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-700">Password</label>
+                    <input 
+                      type="password" 
+                      required
+                      value={formData.password}
+                      onChange={(e) => setFormData({...formData, password: e.target.value})}
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                  </div>
+                )}
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-slate-700">Date of Birth</label>
                   <input 

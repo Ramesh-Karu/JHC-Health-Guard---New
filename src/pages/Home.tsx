@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc, orderBy } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { 
   Heart, 
@@ -23,7 +23,8 @@ import {
   Sparkles,
   Microscope,
   HelpCircle,
-  ExternalLink
+  ExternalLink,
+  X
 } from 'lucide-react';
 import QRScanner from '../components/QRScanner';
 import { Globe } from 'lucide-react';
@@ -92,6 +93,49 @@ export default function Home() {
   const [breakfastItems, setBreakfastItems] = useState<any[]>([]);
   const [vegetables, setVegetables] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Scanned Student State
+  const [scannedStudent, setScannedStudent] = useState<any>(null);
+  const [isScannedModalOpen, setIsScannedModalOpen] = useState(false);
+  const [scannedLoading, setScannedLoading] = useState(false);
+
+  const handleScan = async (decodedText: string) => {
+    try {
+      // Extract ID from URL or use as is if it's just an ID
+      const parts = decodedText.split('/');
+      const studentId = parts[parts.length - 1];
+      
+      if (!studentId) return;
+
+      setIsScannedModalOpen(true);
+      setScannedLoading(true);
+
+      const [studentDoc, healthSnapshot, activitySnapshot] = await Promise.all([
+        getDoc(doc(db, 'users', studentId)),
+        getDocs(query(collection(db, 'health_records'), where('userId', '==', studentId), orderBy('date', 'desc'))),
+        getDocs(query(collection(db, 'activities'), where('userId', '==', studentId), orderBy('date', 'desc')))
+      ]);
+
+      if (studentDoc.exists()) {
+        const studentData = { id: studentDoc.id, ...studentDoc.data() };
+        const healthData = healthSnapshot.docs.map(d => d.data());
+        const activitiesData = activitySnapshot.docs.map(d => d.data());
+        
+        setScannedStudent({
+          ...studentData,
+          healthRecords: healthData,
+          activities: activitiesData
+        });
+      } else {
+        setScannedStudent(null);
+      }
+    } catch (err) {
+      console.error("Error fetching scanned student:", err);
+      setScannedStudent(null);
+    } finally {
+      setScannedLoading(false);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -689,7 +733,139 @@ export default function Home() {
           </div>
         </div>
       </footer>
-      {isScannerOpen && <QRScanner onClose={() => setIsScannerOpen(false)} />}
+      {isScannerOpen && <QRScanner onClose={() => setIsScannerOpen(false)} onScan={handleScan} />}
+
+      {/* Scanned Student Modal */}
+      {isScannedModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white rounded-3xl w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl relative"
+          >
+            <button 
+              onClick={() => setIsScannedModalOpen(false)} 
+              className="absolute top-4 right-4 p-2 hover:bg-slate-100 rounded-full text-slate-500 z-10"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            </button>
+
+            {scannedLoading ? (
+              <div className="p-12 flex flex-col items-center justify-center">
+                <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                <p className="text-slate-500">Loading student data...</p>
+              </div>
+            ) : scannedStudent ? (
+              <div className="p-8">
+                <div className="flex items-center gap-6 mb-8 border-b border-slate-100 pb-8">
+                  <img 
+                    src={scannedStudent.photoUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${scannedStudent.username}`} 
+                    alt={scannedStudent.fullName}
+                    className="w-24 h-24 rounded-2xl object-cover shadow-lg"
+                  />
+                  <div>
+                    <h2 className="text-3xl font-bold text-slate-900 mb-2">{scannedStudent.fullName}</h2>
+                    <div className="flex flex-wrap gap-4 text-slate-600">
+                      <span className="flex items-center gap-1"><Users size={18} /> Class {scannedStudent.class} {scannedStudent.division}</span>
+                      <span className="flex items-center gap-1"><Award size={18} /> {scannedStudent.points || 0} Points</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* BMI Analysis */}
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+                      <Activity className="text-blue-500" /> BMI Analysis
+                    </h3>
+                    {scannedStudent.healthRecords && scannedStudent.healthRecords.length > 0 ? (
+                      <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                        <div className="grid grid-cols-3 gap-4 mb-6">
+                          <div className="bg-white p-4 rounded-xl shadow-sm">
+                            <div className="text-sm text-slate-500 mb-1">Latest BMI</div>
+                            <div className="text-2xl font-bold text-slate-900">{scannedStudent.healthRecords[0].bmi.toFixed(1)}</div>
+                          </div>
+                          <div className="bg-white p-4 rounded-xl shadow-sm">
+                            <div className="text-sm text-slate-500 mb-1">Height</div>
+                            <div className="text-2xl font-bold text-slate-900">{scannedStudent.healthRecords[0].height} cm</div>
+                          </div>
+                          <div className="bg-white p-4 rounded-xl shadow-sm">
+                            <div className="text-sm text-slate-500 mb-1">Weight</div>
+                            <div className="text-2xl font-bold text-slate-900">{scannedStudent.healthRecords[0].weight} kg</div>
+                          </div>
+                        </div>
+                        <div className="h-48">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={[...scannedStudent.healthRecords].reverse()}>
+                              <defs>
+                                <linearGradient id="colorBmi" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                                </linearGradient>
+                              </defs>
+                              <XAxis dataKey="date" hide />
+                              <YAxis domain={['dataMin - 2', 'dataMax + 2']} hide />
+                              <Tooltip 
+                                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                                labelFormatter={(label) => new Date(label).toLocaleDateString()}
+                              />
+                              <Area type="monotone" dataKey="bmi" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorBmi)" />
+                            </AreaChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-slate-50 p-8 rounded-2xl border border-slate-100 text-center text-slate-500">
+                        No health records found.
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Sports Activities */}
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+                      <TrendingUp className="text-emerald-500" /> Recent Activities
+                    </h3>
+                    {scannedStudent.activities && scannedStudent.activities.length > 0 ? (
+                      <div className="space-y-4">
+                        {scannedStudent.activities.slice(0, 5).map((activity: any, idx: number) => (
+                          <div key={idx} className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                              <div className="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center">
+                                {activity.type === 'sport' ? <Award size={20} /> : <Activity size={20} />}
+                              </div>
+                              <div>
+                                <h4 className="font-bold text-slate-900">{activity.name}</h4>
+                                <p className="text-sm text-slate-500">{new Date(activity.date).toLocaleDateString()}</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="font-bold text-emerald-600">+{activity.points} pts</div>
+                              {activity.duration && <div className="text-xs text-slate-500">{activity.duration}</div>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="bg-slate-50 p-8 rounded-2xl border border-slate-100 text-center text-slate-500">
+                        No recent activities found.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="p-12 text-center">
+                <div className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <X size={32} />
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 mb-2">Student Not Found</h3>
+                <p className="text-slate-500">The scanned QR code does not match any student in our system.</p>
+              </div>
+            )}
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

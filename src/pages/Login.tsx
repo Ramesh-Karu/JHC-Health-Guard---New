@@ -26,7 +26,8 @@ export default function Login() {
 
       // If it's not an email, look up the systemEmail by username
       if (!username.includes('@')) {
-        const q = query(collection(db, 'users'), where('username', '==', username));
+        const normalizedUsername = username.toLowerCase().trim();
+        const q = query(collection(db, 'users'), where('username', '==', normalizedUsername));
         const snapshot = await getDocs(q);
         
         if (snapshot.empty) {
@@ -37,7 +38,7 @@ export default function Login() {
         
         const userDoc = snapshot.docs[0];
         userData = userDoc.data();
-        loginEmail = userData.systemEmail;
+        loginEmail = userData.systemEmail || `${userData.username}@school.internal`;
         
         if (!loginEmail) {
           setError('Account not properly configured for username login.');
@@ -47,8 +48,22 @@ export default function Login() {
       }
 
       // Sign in with Firebase Auth
-      const result = await signInWithEmailAndPassword(auth, loginEmail, password);
-      userId = result.user.uid;
+      let result;
+      try {
+        result = await signInWithEmailAndPassword(auth, loginEmail, password);
+        userId = result.user.uid;
+      } catch (err: any) {
+        console.error("Firebase Auth Error:", err);
+        if (err.code === 'auth/invalid-credential') {
+          setError('Invalid username or password.');
+        } else if (err.code === 'auth/too-many-requests') {
+          setError('Too many failed login attempts. Please try again later.');
+        } else {
+          setError('Failed to sign in. Please check your credentials.');
+        }
+        setLoading(false);
+        return;
+      }
 
       // If we haven't fetched userData yet (because they logged in with email), fetch it now
       if (!userData) {

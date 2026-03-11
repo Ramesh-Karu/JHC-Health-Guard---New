@@ -80,8 +80,16 @@ export default function AdminTeachers() {
       setToast({ message: editingTeacher ? 'Teacher updated successfully' : 'Teacher added successfully', type: 'success' });
       setFormData({ fullName: '', email: '', password: '', class: '', division: '', phone: '', indexNumber: '' });
       fetchTeachers();
-    } catch (error) {
-      handleFirestoreError(error, editingTeacher ? OperationType.UPDATE : OperationType.CREATE, 'users');
+    } catch (err: any) {
+      console.error("Error saving teacher:", err);
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+      if (errorMessage.includes('auth/email-already-in-use')) {
+        setToast({ message: 'Email is already taken.', type: 'error' });
+      } else if (errorMessage.includes('auth/weak-password')) {
+        setToast({ message: 'Password should be at least 6 characters.', type: 'error' });
+      } else {
+        setToast({ message: 'Failed to save teacher. Please try again.', type: 'error' });
+      }
     }
   };
 
