@@ -151,7 +151,7 @@ export default function HealthPassport() {
 
   return (
     <div className="space-y-8 pb-12">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <button 
             onClick={() => navigate(-1)}
@@ -164,20 +164,20 @@ export default function HealthPassport() {
             <p className="text-slate-500">Official student health record</p>
           </div>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
           <button 
             onClick={() => handlePrint()}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-slate-700 font-bold hover:bg-slate-50 transition-all shadow-sm"
+            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-slate-700 font-bold hover:bg-slate-50 transition-all shadow-sm"
           >
             <Printer size={18} />
-            Print Report
+            <span className="whitespace-nowrap">Print Report</span>
           </button>
           <button 
             onClick={handleDownloadPDF}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-xl font-bold hover:bg-blue-600 transition-all shadow-lg shadow-blue-200"
+            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-xl font-bold hover:bg-blue-600 transition-all shadow-lg shadow-blue-200"
           >
             <Download size={18} />
-            Download Card
+            <span className="whitespace-nowrap">Download Card</span>
           </button>
         </div>
       </div>
@@ -189,10 +189,10 @@ export default function HealthPassport() {
         </div>
         
         {/* Passport Header Card */}
-        <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-[40px] p-8 md:p-12 text-white shadow-2xl relative overflow-hidden">
+        <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-[40px] p-6 md:p-12 text-white shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
           <div className="relative z-10 flex flex-col md:flex-row gap-8 items-center md:items-start">
-            <div className="w-40 h-40 rounded-[32px] border-4 border-white/20 overflow-hidden shadow-2xl flex-shrink-0">
+            <div className="w-32 h-32 md:w-40 md:h-40 rounded-[32px] border-4 border-white/20 overflow-hidden shadow-2xl flex-shrink-0">
               <img 
                 src={student?.photoUrl || `https://picsum.photos/seed/${student?.username}/400/400`} 
                 alt={student?.fullName} 
@@ -200,34 +200,34 @@ export default function HealthPassport() {
                 referrerPolicy="no-referrer"
               />
             </div>
-            <div className="flex-1 text-center md:text-left">
-              <div className="flex flex-col md:flex-row md:items-center gap-4 mb-6">
-                <h2 className="text-4xl font-bold tracking-tight">{student?.fullName}</h2>
-                <span className="px-4 py-1 bg-blue-500/30 backdrop-blur-md rounded-full text-sm font-bold border border-white/20">
+            <div className="flex-1 text-center md:text-left w-full">
+              <div className="flex flex-col md:flex-row items-center md:items-center gap-3 md:gap-4 mb-6">
+                <h2 className="text-3xl md:text-4xl font-bold tracking-tight break-words text-center md:text-left w-full md:w-auto">{student?.fullName}</h2>
+                <span className="px-4 py-1 bg-blue-500/30 backdrop-blur-md rounded-full text-sm font-bold border border-white/20 whitespace-nowrap">
                   {student?.class}
                 </span>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-slate-300">
-                <div>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 text-slate-300">
+                <div className="bg-white/5 p-3 rounded-2xl md:bg-transparent md:p-0 md:rounded-none">
                   <p className="text-[10px] font-bold uppercase tracking-widest mb-1 opacity-60">Index Number</p>
-                  <p className="font-bold text-white">{student?.indexNumber}</p>
+                  <p className="font-bold text-white break-all">{student?.indexNumber}</p>
                 </div>
-                <div>
+                <div className="bg-white/5 p-3 rounded-2xl md:bg-transparent md:p-0 md:rounded-none">
                   <p className="text-[10px] font-bold uppercase tracking-widest mb-1 opacity-60">Date of Birth</p>
                   <p className="font-bold text-white">{student?.dob ? new Date(student.dob).toLocaleDateString() : 'N/A'}</p>
                 </div>
-                <div>
+                <div className="bg-white/5 p-3 rounded-2xl md:bg-transparent md:p-0 md:rounded-none">
                   <p className="text-[10px] font-bold uppercase tracking-widest mb-1 opacity-60">Gender</p>
                   <p className="font-bold text-white capitalize">{student?.gender}</p>
                 </div>
-                <div>
+                <div className="bg-white/5 p-3 rounded-2xl md:bg-transparent md:p-0 md:rounded-none">
                   <p className="text-[10px] font-bold uppercase tracking-widest mb-1 opacity-60">Health Status</p>
                   <p className="font-bold text-emerald-400">{latestRecord?.category || 'Normal'}</p>
                 </div>
               </div>
             </div>
-            <div className="bg-white p-4 rounded-3xl shadow-2xl flex-shrink-0">
-              <QRCodeSVG value={passportUrl} size={120} />
+            <div className="bg-white p-4 rounded-3xl shadow-2xl flex-shrink-0 mt-4 md:mt-0">
+              <QRCodeSVG value={passportUrl} size={100} className="md:w-[120px] md:h-[120px]" />
               <p className="text-[10px] font-bold text-slate-400 text-center mt-2 uppercase tracking-widest">Verify Passport</p>
             </div>
           </div>

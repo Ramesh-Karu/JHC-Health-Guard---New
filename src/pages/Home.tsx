@@ -24,7 +24,14 @@ import {
   Microscope,
   HelpCircle,
   ExternalLink,
-  X
+  X,
+  MapPin,
+  Phone,
+  Mail,
+  Calendar,
+  User,
+  Ruler,
+  Scale as ScaleIcon
 } from 'lucide-react';
 import QRScanner from '../components/QRScanner';
 import { Globe } from 'lucide-react';
@@ -768,7 +775,27 @@ export default function Home() {
                     <div className="flex flex-wrap gap-4 text-slate-600">
                       <span className="flex items-center gap-1"><Users size={18} /> Class {scannedStudent.class} {scannedStudent.division}</span>
                       <span className="flex items-center gap-1"><Award size={18} /> {scannedStudent.points || 0} Points</span>
+                      <span className="flex items-center gap-1"><ShieldCheck size={18} /> {scannedStudent.indexNumber}</span>
                     </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8 bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest mb-1 opacity-60">Date of Birth</p>
+                    <p className="font-bold text-slate-900">{scannedStudent.dob ? new Date(scannedStudent.dob).toLocaleDateString() : 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest mb-1 opacity-60">Gender</p>
+                    <p className="font-bold text-slate-900 capitalize">{scannedStudent.gender || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest mb-1 opacity-60">Health Status</p>
+                    <p className="font-bold text-emerald-600">{scannedStudent.healthRecords?.[0]?.category || 'Normal'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest mb-1 opacity-60">Blood Group</p>
+                    <p className="font-bold text-red-600">{scannedStudent.bloodGroup || 'N/A'}</p>
                   </div>
                 </div>
 
@@ -851,6 +878,36 @@ export default function Home() {
                         No recent activities found.
                       </div>
                     )}
+                  </div>
+                </div>
+
+                {/* Emergency Contact Section */}
+                <div className="mt-8 pt-8 border-t border-slate-100">
+                  <h3 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
+                    <Phone className="text-red-500" /> Emergency Contact
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                      <User size={18} className="text-slate-400" />
+                      <div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Parent/Guardian</p>
+                        <p className="text-sm font-bold text-slate-900">{scannedStudent.parentName || 'N/A'}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                      <Phone size={18} className="text-slate-400" />
+                      <div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Contact Number</p>
+                        <p className="text-sm font-bold text-slate-900">{scannedStudent.parentContact || 'N/A'}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                      <MapPin size={18} className="text-slate-400" />
+                      <div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Address</p>
+                        <p className="text-sm font-bold text-slate-900">{scannedStudent.address || 'N/A'}</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
