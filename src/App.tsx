@@ -17,7 +17,6 @@ import {
   LogOut, 
   Menu, 
   X, 
-  Bell,
   Search,
   Plus,
   ChevronRight,
@@ -293,12 +292,7 @@ const Layout = () => {
           </div>
 
           <div className="flex items-center gap-6 z-10">
-            <button className="relative p-2 hover:bg-white/50 rounded-lg text-slate-500 transition-colors">
-              <Bell size={20} />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-            </button>
-            
-            <div className="flex items-center gap-3 pl-6 border-l border-white/50">
+            <div className="flex items-center gap-3">
               <div className="text-right hidden sm:block">
                 <p className="text-sm font-bold text-slate-900">{user?.fullName}</p>
                 <p className="text-xs text-slate-500 capitalize">{user?.role}</p>

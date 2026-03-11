@@ -20,22 +20,56 @@ export default function Login() {
     setError('');
     setLoading(true);
     try {
-      // 1. Find user by username
-      const q = query(collection(db, 'users'), where('username', '==', username));
-      const snapshot = await getDocs(q);
-      
-      if (snapshot.empty) {
-        setError('Invalid username or password.');
-        return;
+      let loginEmail = username;
+      let userData: any = null;
+      let userId = '';
+
+      // If it's not an email, look up the systemEmail by username
+      if (!username.includes('@')) {
+        const q = query(collection(db, 'users'), where('username', '==', username));
+        const snapshot = await getDocs(q);
+        
+        if (snapshot.empty) {
+          setError('Invalid username or password.');
+          setLoading(false);
+          return;
+        }
+        
+        const userDoc = snapshot.docs[0];
+        userData = userDoc.data();
+        loginEmail = userData.systemEmail;
+        
+        if (!loginEmail) {
+          setError('Account not properly configured for username login.');
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Sign in with Firebase Auth
+      const result = await signInWithEmailAndPassword(auth, loginEmail, password);
+      userId = result.user.uid;
+
+      // If we haven't fetched userData yet (because they logged in with email), fetch it now
+      if (!userData) {
+        const userRef = doc(db, 'users', userId);
+        const userDoc = await getDoc(userRef);
+        if (userDoc.exists()) {
+          userData = userDoc.data();
+        } else {
+          // Fallback if user document doesn't exist
+          userData = {
+            uid: userId,
+            email: result.user.email,
+            fullName: result.user.displayName || 'User',
+            role: 'student',
+            createdAt: new Date().toISOString()
+          };
+          await setDoc(userRef, userData);
+        }
       }
       
-      const userDoc = snapshot.docs[0];
-      const userData = userDoc.data();
-      
-      // 2. Use systemEmail to sign in
-      const result = await signInWithEmailAndPassword(auth, userData.systemEmail, password);
-      
-      login({ ...userData, id: result.user.uid });
+      login({ ...userData, id: userId });
       
       if (userData.role === 'student' && userData.passwordChanged === false) navigate('/change-password');
       else if (userData.role === 'teacher') navigate('/teacher/dashboard');
@@ -44,6 +78,7 @@ export default function Login() {
       else if (userData.role === 'breakfast-admin') navigate('/breakfast-admin-dashboard');
       else navigate('/dashboard');
     } catch (err) {
+      console.error("Login error:", err);
       setError('Invalid username or password.');
     } finally {
       setLoading(false);
@@ -137,7 +172,7 @@ export default function Login() {
             )}
             <div className="relative">
               <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <input type="text" placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl" required />
+              <input type="text" placeholder="Username or Email" value={username} onChange={(e) => setUsername(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl" required />
             </div>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />

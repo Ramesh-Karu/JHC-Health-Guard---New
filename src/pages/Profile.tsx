@@ -52,6 +52,14 @@ export default function Profile() {
       const userRef = doc(db, 'users', user.id);
       // Ensure profileCompleted is set to true when saving
       const updatedData = { ...formData, profileCompleted: true };
+      
+      // Remove undefined values to prevent Firebase errors
+      Object.keys(updatedData).forEach(key => {
+        if (updatedData[key as keyof typeof updatedData] === undefined) {
+          delete updatedData[key as keyof typeof updatedData];
+        }
+      });
+
       await updateDoc(userRef, updatedData);
       
       const updatedUser = { ...user, ...updatedData };
@@ -59,6 +67,7 @@ export default function Profile() {
       setIsEditing(false);
       navigate('/dashboard');
     } catch (err) {
+      console.error("Error saving profile:", err);
       handleFirestoreError(err, OperationType.UPDATE, `users/${user.id}`);
     } finally {
       setLoading(false);
