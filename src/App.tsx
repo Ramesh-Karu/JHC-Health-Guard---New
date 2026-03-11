@@ -191,7 +191,14 @@ const Layout = () => {
   const filteredItems = menuItems.filter(item => item.roles.includes(user?.role || 'student'));
 
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden font-sans relative">
+    <div className="flex h-screen bg-[#F8FAFC] overflow-hidden font-sans relative">
+      {/* Global Background Gradients for Glass Effect */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-400/20 rounded-full blur-[120px]" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-400/20 rounded-full blur-[120px]" />
+        <div className="absolute top-[40%] right-[10%] w-[30%] h-[30%] bg-emerald-400/10 rounded-full blur-[100px]" />
+      </div>
+
       {/* Mobile Sidebar Overlay */}
       <AnimatePresence>
         {isSidebarOpen && window.innerWidth <= 768 && (
@@ -214,8 +221,9 @@ const Layout = () => {
         }}
         transition={{ duration: 0.3, ease: "easeInOut" }}
         className={cn(
-          "bg-white border-r border-slate-200 flex-shrink-0 z-30 overflow-hidden absolute md:relative h-full",
-          !isSidebarOpen && "border-none"
+          "fixed h-[calc(100vh-32px)] z-30 overflow-hidden m-4 rounded-3xl",
+          "bg-white/70 backdrop-blur-2xl border border-white/50 shadow-2xl shadow-slate-200/20",
+          !isSidebarOpen && "w-0 border-none p-0"
         )}
       >
         <div className="flex flex-col h-full p-6 w-[280px]">
@@ -239,10 +247,10 @@ const Layout = () => {
             ))}
           </nav>
 
-          <div className="mt-auto pt-6 border-t border-slate-100">
+          <div className="mt-auto pt-6 border-t border-white/10">
             <button
               onClick={logout}
-              className="flex items-center w-full gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-red-50 hover:text-red-600 transition-all duration-200"
+              className="flex items-center w-full gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-white/50 hover:text-red-600 transition-all duration-200"
             >
               <LogOut size={20} />
               <span className="font-medium">Logout</span>
@@ -252,13 +260,13 @@ const Layout = () => {
       </motion.aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col overflow-hidden">
+      <main className={cn("flex-1 flex flex-col overflow-hidden transition-all duration-300", isSidebarOpen && "md:ml-[300px]")}>
         {/* Header */}
-        <header className="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 flex-shrink-0">
-          <div className="flex items-center gap-4">
+        <header className="h-16 mt-4 mx-4 bg-white/40 backdrop-blur-2xl border border-white/60 rounded-2xl flex items-center justify-between px-4 md:px-8 flex-shrink-0 shadow-xl shadow-blue-900/5 z-10 relative">
+          <div className="flex items-center gap-4 z-10">
             <button 
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors"
+              className="p-2 hover:bg-white/50 rounded-lg text-slate-500 transition-colors"
               aria-label="Toggle Sidebar"
             >
               {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
@@ -268,18 +276,29 @@ const Layout = () => {
               <input 
                 type="text" 
                 placeholder="Search health data..." 
-                className="pl-10 pr-4 py-2 bg-slate-100 border-none rounded-xl w-64 focus:ring-2 focus:ring-blue-500 transition-all outline-none text-sm"
+                className="pl-10 pr-4 py-2 bg-white/50 border border-white/60 rounded-xl w-64 focus:ring-2 focus:ring-blue-500 transition-all outline-none text-sm shadow-sm"
               />
             </div>
           </div>
 
-          <div className="flex items-center gap-6">
-            <button className="relative p-2 hover:bg-slate-100 rounded-lg text-slate-500">
+          {/* Center Logo */}
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-3 pointer-events-none">
+            <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center shadow-lg shadow-blue-200">
+              <Heart className="text-white" size={20} />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-base font-bold text-slate-900 tracking-tight leading-none">Health Guard</span>
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-1">Jaffna Hindu College</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-6 z-10">
+            <button className="relative p-2 hover:bg-white/50 rounded-lg text-slate-500 transition-colors">
               <Bell size={20} />
               <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
             </button>
             
-            <div className="flex items-center gap-3 pl-6 border-l border-slate-200">
+            <div className="flex items-center gap-3 pl-6 border-l border-white/50">
               <div className="text-right hidden sm:block">
                 <p className="text-sm font-bold text-slate-900">{user?.fullName}</p>
                 <p className="text-xs text-slate-500 capitalize">{user?.role}</p>
@@ -296,7 +315,7 @@ const Layout = () => {
         </header>
 
         {/* Page Content */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50/50">
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-transparent relative z-10">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={location.pathname}

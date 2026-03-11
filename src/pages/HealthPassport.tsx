@@ -37,7 +37,6 @@ import {
   LineChart,
   Line
 } from 'recharts';
-import { analyzeStudentHealth, AIAnalysisResult } from '../services/aiService';
 import { HealthPassportCard } from '../components/HealthPassportCard';
 import { Skeleton } from '../components/Skeleton';
 import jsPDF from 'jspdf';
@@ -50,7 +49,6 @@ export default function HealthPassport() {
   const [student, setStudent] = useState<any>(null);
   const [healthHistory, setHealthHistory] = useState<any[]>([]);
   const [activities, setActivities] = useState<any[]>([]);
-  const [aiAnalysis, setAiAnalysis] = useState<AIAnalysisResult | null>(null);
   const [loading, setLoading] = useState(true);
   const componentRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -77,41 +75,20 @@ export default function HealthPassport() {
       if (!targetId) return;
 
       try {
-        let profile = null;
-        
-        // Fetch student profile
-        const studentDoc = await getDoc(doc(db, 'users', targetId));
-        if (studentDoc.exists()) {
-          profile = { id: studentDoc.id, ...studentDoc.data() } as any;
-        }
-        
-        setStudent(profile);
+        // Fetch all in parallel
+        const [studentDoc, healthSnapshot, activitySnapshot] = await Promise.all([
+          getDoc(doc(db, 'users', targetId)),
+          getDocs(query(collection(db, 'health_records'), where('userId', '==', targetId), orderBy('date', 'desc'))),
+          getDocs(query(collection(db, 'activities'), where('userId', '==', targetId), orderBy('date', 'desc')))
+        ]);
 
-        // Fetch health history
-        const healthQ = query(
-          collection(db, 'health_records'),
-          where('userId', '==', targetId),
-          orderBy('date', 'desc')
-        );
-        const healthSnapshot = await getDocs(healthQ);
+        const profile = studentDoc.exists() ? { id: studentDoc.id, ...studentDoc.data() } as any : null;
         const history = healthSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setHealthHistory(history);
-
-        // Fetch activities
-        const activityQ = query(
-          collection(db, 'activities'),
-          where('userId', '==', targetId),
-          orderBy('date', 'desc')
-        );
-        const activitySnapshot = await getDocs(activityQ);
         const activityData = activitySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setActivities(activityData);
 
-        // AI Analysis
-        if (profile) {
-          const analysis = await analyzeStudentHealth(profile, history, activityData);
-          setAiAnalysis(analysis);
-        }
+        setStudent(profile);
+        setHealthHistory(history);
+        setActivities(activityData);
 
       } catch (err) {
         handleFirestoreError(err, OperationType.GET, 'users/health_records/activities');
@@ -323,51 +300,6 @@ export default function HealthPassport() {
 
           {/* Right Column: AI Insights & Nutrition */}
           <div className="space-y-8">
-            {/* AI Health Risks */}
-            <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm">
-              <h3 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
-                <Brain size={20} className="text-blue-500" />
-                AI Health Intelligence
-              </h3>
-              <div className="space-y-4">
-                {aiAnalysis?.risks.map((risk, i) => (
-                  <div key={i} className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-bold text-slate-900 text-sm">{risk.type}</span>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                        risk.level === 'High' ? 'bg-red-50 text-red-600' :
-                        risk.level === 'Medium' ? 'bg-amber-50 text-amber-600' :
-                        'bg-emerald-50 text-emerald-600'
-                      }`}>
-                        {risk.level}
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-500">{risk.description}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Nutrition Advisor */}
-            <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm">
-              <h3 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
-                <Apple size={20} className="text-emerald-500" />
-                Nutrition Insights
-              </h3>
-              <div className="space-y-4">
-                {aiAnalysis?.nutritionRecommendations.slice(0, 3).map((rec, i) => (
-                  <div key={i} className="p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100">
-                    <p className="font-bold text-emerald-900 text-sm mb-1">{rec.food}</p>
-                    <p className="text-xs text-emerald-700 mb-2">{rec.benefits}</p>
-                    <div className="flex justify-between text-[10px] font-bold text-emerald-600 uppercase tracking-widest">
-                      <span>{rec.calories} kcal</span>
-                      <span>{rec.portion}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
             {/* Contact Info */}
             <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm">
               <h3 className="text-lg font-bold text-slate-900 mb-6">Emergency Contact</h3>

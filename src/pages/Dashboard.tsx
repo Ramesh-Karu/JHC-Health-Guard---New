@@ -17,7 +17,8 @@ import {
   Scale,
   Ruler,
   CheckCircle2,
-  Zap
+  Zap,
+  MessageSquare
 } from 'lucide-react';
 import { 
   LineChart, 
@@ -37,8 +38,6 @@ import {
 } from 'recharts';
 import { useAuth } from '../App';
 import { HealthRecord, Activity as ActivityType } from '../types';
-import { analyzeStudentHealth, getAdminAIInsights, AIAnalysisResult } from '../services/aiService';
-import { Brain, Sparkles, AlertTriangle, ShieldAlert, Lightbulb, MessageSquare } from 'lucide-react';
 
 const StatCard = ({ icon: Icon, label, value, trend, trendValue, color }: any) => (
   <motion.div 
@@ -75,26 +74,21 @@ export default function Dashboard() {
   const [activities, setActivities] = useState<ActivityType[]>([]);
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [aiAnalysis, setAiAnalysis] = useState<AIAnalysisResult | null>(null);
-  const [adminAIInsights, setAdminAIInsights] = useState<any>(null);
-  const [loadingAI, setLoadingAI] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         if (user?.role === 'admin') {
           try {
-            // Fetch students
-            const studentsQuery = query(collection(db, 'users'), where('role', '==', 'student'));
-            const studentsSnapshot = await getDocs(studentsQuery);
+            // Fetch all in parallel
+            const [studentsSnapshot, healthRecordsSnapshot, activitiesSnapshot] = await Promise.all([
+              getDocs(query(collection(db, 'users'), where('role', '==', 'student'))),
+              getDocs(collection(db, 'health_records')),
+              getDocs(collection(db, 'activities'))
+            ]);
+
             const students = studentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-            // Fetch health records for analytics
-            const healthRecordsSnapshot = await getDocs(collection(db, 'health_records'));
             const allHealthRecords = healthRecordsSnapshot.docs.map(doc => doc.data());
-
-            // Fetch activities for analytics
-            const activitiesSnapshot = await getDocs(collection(db, 'activities'));
             const allActivities = activitiesSnapshot.docs.map(doc => doc.data());
 
             // Calculate analytics
@@ -149,42 +143,31 @@ export default function Dashboard() {
               classStats,
               activityStats
             });
-
-            // Fetch Admin AI Insights
-            const aiInsights = await getAdminAIInsights(students);
-            setAdminAIInsights(aiInsights);
           } catch (error) {
             handleFirestoreError(error, OperationType.GET, 'analytics');
           }
         } else {
           try {
-            // Fetch Health Records
-            const healthQuery = query(collection(db, 'health_records'), where('userId', '==', user?.id), orderBy('date', 'desc'));
-            const healthSnapshot = await getDocs(healthQuery);
-            const history = healthSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as HealthRecord[];
+            // Fetch all in parallel
+            const promises: any[] = [
+              getDocs(query(collection(db, 'health_records'), where('userId', '==', user?.id), orderBy('date', 'desc'))),
+              getDocs(query(collection(db, 'activities'), where('userId', '==', user?.id), orderBy('date', 'desc')))
+            ];
             
-            // Fetch Activities
-            const activityQuery = query(collection(db, 'activities'), where('userId', '==', user?.id), orderBy('date', 'desc'));
-            const activitySnapshot = await getDocs(activityQuery);
-            const activitiesData = activitySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as ActivityType[];
-            
-            // Fetch Announcements
-            let announcementsData: any[] = [];
             if (user?.class) {
-               const announcementsQuery = query(collection(db, 'announcements'), where('class', '==', user.class));
-               const announcementsSnapshot = await getDocs(announcementsQuery);
-               announcementsData = announcementsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+               promises.push(getDocs(query(collection(db, 'announcements'), where('class', '==', user.class))));
             }
+
+            const [healthSnapshot, activitySnapshot, announcementsSnapshot] = await Promise.all(promises);
+            
+            const history = healthSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as HealthRecord[];
+            const activitiesData = activitySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as ActivityType[];
+            const announcementsData = announcementsSnapshot ? announcementsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) : [];
 
             setHealthHistory(history);
             setActivities(activitiesData);
             setAnnouncements(announcementsData);
 
-            // Fetch Student AI Analysis
-            setLoadingAI(true);
-            const analysis = await analyzeStudentHealth(user, history, activitiesData);
-            setAiAnalysis(analysis);
-            setLoadingAI(false);
           } catch (error) {
             handleFirestoreError(error, OperationType.GET, 'student_dashboard_data');
           }
@@ -255,46 +238,6 @@ export default function Dashboard() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* AI Insights Panel */}
-          <div className="bg-gradient-to-br from-indigo-600 to-blue-700 p-8 rounded-[40px] text-white shadow-xl shadow-blue-200 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl" />
-            <div className="relative z-10">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-xl flex items-center justify-center">
-                  <Brain size={20} />
-                </div>
-                <h3 className="text-lg font-bold">AI Health Insights</h3>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/10">
-                  <p className="text-blue-100 text-xs font-bold uppercase tracking-wider mb-1">Students at Risk</p>
-                  <p className="text-2xl font-bold">{adminAIInsights?.studentsAtRiskCount || 0}</p>
-                </div>
-                <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/10">
-                  <p className="text-blue-100 text-xs font-bold uppercase tracking-wider mb-1">Abnormal Growth</p>
-                  <p className="text-2xl font-bold">{adminAIInsights?.abnormalGrowthCount || 0}</p>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                {adminAIInsights?.topRisks?.slice(0, 2).map((risk: string, i: number) => (
-                  <div key={i} className="flex items-center gap-3 text-sm bg-white/5 p-3 rounded-xl">
-                    <ShieldAlert size={16} className="text-red-300" />
-                    <span className="text-blue-50">{risk}</span>
-                  </div>
-                ))}
-              </div>
-
-              <button 
-                onClick={() => window.location.href = '/ai-insights'}
-                className="mt-6 w-full py-3 bg-white text-blue-600 rounded-xl font-bold hover:bg-blue-50 transition-all flex items-center justify-center gap-2"
-              >
-                View Full AI Dashboard <ChevronRight size={18} />
-              </button>
-            </div>
-          </div>
-
           <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm">
             <h3 className="text-lg font-bold text-slate-900 mb-6">BMI Distribution</h3>
             <div className="h-80">
@@ -518,40 +461,11 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* AI Health Alerts */}
-          {aiAnalysis && aiAnalysis.risks.some(r => r.level === 'High' || r.level === 'Medium') && (
-            <div className="bg-white p-6 rounded-3xl border border-red-100 shadow-sm">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-red-50 text-red-500 rounded-xl flex items-center justify-center">
-                  <AlertTriangle size={20} />
-                </div>
-                <h3 className="text-lg font-bold text-slate-900">AI Health Alerts</h3>
-              </div>
-              <div className="space-y-3">
-                {aiAnalysis.risks.filter(r => r.level === 'High' || r.level === 'Medium').map((risk, i) => (
-                  <div key={i} className="flex items-start gap-3 p-3 bg-red-50/50 rounded-xl border border-red-50">
-                    <div className="w-1.5 h-1.5 rounded-full bg-red-500 mt-1.5 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm font-bold text-red-900">{risk.type}</p>
-                      <p className="text-xs text-red-700">{risk.description}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
           <div className="bg-blue-600 p-8 rounded-3xl text-white shadow-xl shadow-blue-200">
-            <h3 className="text-xl font-bold mb-2">AI Health Tip</h3>
+            <h3 className="text-xl font-bold mb-2">Health Tip</h3>
             <p className="text-blue-100 text-sm mb-6">
-              {loadingAI ? "AI is generating a tip..." : aiAnalysis?.dailyTips[0] || "Drinking 8 glasses of water daily helps maintain energy levels."}
+              Drinking 8 glasses of water daily helps maintain energy levels.
             </p>
-            <button 
-              onClick={() => window.location.href = '/ai-insights'}
-              className="w-full py-3 bg-white/20 hover:bg-white/30 rounded-xl font-bold transition-all flex items-center justify-center gap-2"
-            >
-              View AI Insights <ChevronRight size={18} />
-            </button>
           </div>
 
           <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm">
