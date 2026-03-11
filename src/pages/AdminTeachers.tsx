@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { collection, query, where, getDocs, addDoc, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, doc, updateDoc, deleteDoc, setDoc } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
@@ -62,10 +62,17 @@ export default function AdminTeachers() {
         const teacherRef = doc(db, 'users', editingTeacher.id);
         await updateDoc(teacherRef, teacherData);
       } else {
-        await addDoc(collection(db, 'users'), {
+        const tempApp = initializeApp(firebaseConfig as any, 'temp-create-teacher-' + Date.now());
+        const tempAuth = getAuth(tempApp);
+        
+        const userCredential = await createUserWithEmailAndPassword(tempAuth, formData.email, formData.password);
+        
+        await setDoc(doc(db, 'users', userCredential.user.uid), {
           ...teacherData,
           createdAt: new Date().toISOString()
         });
+        
+        await deleteApp(tempApp);
       }
       
       setShowAddModal(false);
@@ -124,7 +131,7 @@ export default function AdminTeachers() {
             
             const userCredential = await createUserWithEmailAndPassword(tempAuth, row.email, row.password);
             
-            await addDoc(collection(db, 'users'), {
+            await setDoc(doc(db, 'users', userCredential.user.uid), {
               fullName: row.fullName,
               email: row.email,
               class: row.class || '',
@@ -334,10 +341,11 @@ export default function AdminTeachers() {
                   />
                 </div>
                 {!editingTeacher && (
-                  <div className="hidden">
+                  <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
                     <input
                       type="password"
+                      required
                       value={formData.password}
                       onChange={e => setFormData({...formData, password: e.target.value})}
                       className="w-full p-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"

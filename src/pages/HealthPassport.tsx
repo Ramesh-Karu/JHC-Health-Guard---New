@@ -71,8 +71,11 @@ export default function HealthPassport() {
 
   useEffect(() => {
     const fetchData = async () => {
-      const targetId = id;
-      if (!targetId) return;
+      const targetId = id || user?.id;
+      if (!targetId) {
+        setLoading(false);
+        return;
+      }
 
       try {
         // Fetch all in parallel
@@ -98,7 +101,7 @@ export default function HealthPassport() {
     };
 
     fetchData();
-  }, [id]);
+  }, [id, user?.id]);
 
   if (loading) return (
     <div className="space-y-8 pb-12 px-4">
@@ -124,6 +127,24 @@ export default function HealthPassport() {
       </div>
     </div>
   );
+
+  if (!student) {
+    return (
+      <div className="flex flex-col items-center justify-center h-96 space-y-4">
+        <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center text-slate-400">
+          <User size={48} />
+        </div>
+        <h2 className="text-2xl font-bold text-slate-900">Student Not Found</h2>
+        <p className="text-slate-500">The health passport you are looking for does not exist or you do not have permission to view it.</p>
+        <button 
+          onClick={() => navigate(-1)}
+          className="px-6 py-3 bg-blue-500 text-white rounded-xl font-bold hover:bg-blue-600 transition-all shadow-lg shadow-blue-200"
+        >
+          Go Back
+        </button>
+      </div>
+    );
+  }
 
   const latestRecord = healthHistory[0];
   const passportUrl = `${window.location.origin}/health-passport/${student?.id}`;
@@ -193,7 +214,7 @@ export default function HealthPassport() {
                 </div>
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-widest mb-1 opacity-60">Date of Birth</p>
-                  <p className="font-bold text-white">{new Date(student?.dob).toLocaleDateString()}</p>
+                  <p className="font-bold text-white">{student?.dob ? new Date(student.dob).toLocaleDateString() : 'N/A'}</p>
                 </div>
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-widest mb-1 opacity-60">Gender</p>

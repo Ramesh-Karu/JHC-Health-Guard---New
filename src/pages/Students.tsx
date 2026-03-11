@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { collection, query, where, getDocs, addDoc, deleteDoc, doc } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, deleteDoc, doc, updateDoc, setDoc } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
@@ -40,6 +40,7 @@ export default function Students() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isHealthModalOpen, setIsHealthModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<User | null>(null);
+  const [editingStudent, setEditingStudent] = useState<User | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
@@ -84,25 +85,69 @@ export default function Students() {
     }
   };
 
-  const handleCreateStudent = async (e: React.FormEvent) => {
+  const handleSaveStudent = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await addDoc(collection(db, 'users'), {
-        ...formData,
-        role: 'student',
-        points: 0,
-        createdAt: new Date().toISOString()
-      });
+      if (editingStudent) {
+        // Update existing student
+        const studentRef = doc(db, 'users', editingStudent.id);
+        const updateData = { ...formData };
+        if (!updateData.password) {
+          delete (updateData as any).password;
+        }
+        await updateDoc(studentRef, updateData);
+        setToast({ message: 'Student updated successfully!', type: 'success' });
+      } else {
+        // Create new student
+        const tempApp = initializeApp(firebaseConfig as any, 'temp-create-student-' + Date.now());
+        const tempAuth = getAuth(tempApp);
+        
+        const systemEmail = `${formData.username}@school.internal`;
+        const userCredential = await createUserWithEmailAndPassword(tempAuth, systemEmail, formData.password);
+        
+        await setDoc(doc(db, 'users', userCredential.user.uid), {
+          ...formData,
+          systemEmail: systemEmail,
+          role: 'student',
+          passwordChanged: false,
+          profileCompleted: false,
+          points: 0,
+          createdAt: new Date().toISOString()
+        });
+        
+        await deleteApp(tempApp);
+        setToast({ message: 'Student registered successfully!', type: 'success' });
+      }
+      
       fetchStudents();
       setIsModalOpen(false);
-      setToast({ message: 'Student registered successfully!', type: 'success' });
+      setEditingStudent(null);
       setFormData({
         username: '', password: '', fullName: '', indexNumber: '', dob: '',
         gender: 'Male', class: '', division: '', address: '', parentName: '', parentContact: '', photoUrl: ''
       });
     } catch (err) {
-      handleFirestoreError(err, OperationType.CREATE, 'users');
+      handleFirestoreError(err, editingStudent ? OperationType.UPDATE : OperationType.CREATE, 'users');
     }
+  };
+
+  const openEditModal = (student: User) => {
+    setEditingStudent(student);
+    setFormData({
+      username: student.username || '',
+      password: '', // Don't populate password
+      fullName: student.fullName || '',
+      indexNumber: student.indexNumber || '',
+      dob: student.dob || '',
+      gender: student.gender || 'Male',
+      class: student.class || '',
+      division: student.division || '',
+      address: student.address || '',
+      parentName: student.parentName || '',
+      parentContact: student.parentContact || '',
+      photoUrl: student.photoUrl || ''
+    });
+    setIsModalOpen(true);
   };
 
   const handleAddHealthRecord = async (e: React.FormEvent) => {
@@ -182,7 +227,7 @@ export default function Students() {
             const systemEmail = `${row.username}@school.internal`;
             const userCredential = await createUserWithEmailAndPassword(tempAuth, systemEmail, row.password);
             
-            await addDoc(collection(db, 'users'), {
+            await setDoc(doc(db, 'users', userCredential.user.uid), {
               email: row.email || '',
               username: row.username,
               systemEmail: systemEmail,
@@ -339,7 +384,11 @@ export default function Students() {
                       >
                         <Activity size={18} />
                       </button>
-                      <button className="p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors">
+                      <button 
+                        onClick={() => openEditModal(student)}
+                        className="p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors"
+                        title="Edit Student"
+                      >
                         <Edit size={18} />
                       </button>
                       <button onClick={() => handleDelete(student.id)} className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-colors">
@@ -354,7 +403,7 @@ export default function Students() {
         </div>
       </div>
 
-      {/* Add Student Modal */}
+      {/* Add/Edit Student Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
           <motion.div 
@@ -363,12 +412,12 @@ export default function Students() {
             className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl"
           >
             <div className="p-6 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white z-10">
-              <h2 className="text-xl font-bold text-slate-900">Register New Student</h2>
-              <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500">
+              <h2 className="text-xl font-bold text-slate-900">{editingStudent ? 'Edit Student' : 'Register New Student'}</h2>
+              <button onClick={() => { setIsModalOpen(false); setEditingStudent(null); }} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500">
                 <X size={20} />
               </button>
             </div>
-            <form onSubmit={handleCreateStudent} className="p-8 space-y-6">
+            <form onSubmit={handleSaveStudent} className="p-8 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-slate-700">Full Name</label>
@@ -395,16 +444,17 @@ export default function Students() {
                   <input 
                     type="text" 
                     required
+                    disabled={!!editingStudent}
                     value={formData.username}
                     onChange={(e) => setFormData({...formData, username: e.target.value})}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none disabled:opacity-50"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700">Password</label>
+                  <label className="text-sm font-bold text-slate-700">Password {editingStudent && '(Leave blank to keep current)'}</label>
                   <input 
                     type="password" 
-                    required
+                    required={!editingStudent}
                     value={formData.password}
                     onChange={(e) => setFormData({...formData, password: e.target.value})}
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"

@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { collection, query, where, getDocs, addDoc, doc, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, doc, deleteDoc, setDoc } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
+import { initializeApp, deleteApp } from 'firebase/app';
+import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
+import firebaseConfig from '../../firebase-applet-config.json';
 import { Plus, Trash2, Users, UserPlus, Award } from 'lucide-react';
 import { useAuth } from '../App';
 import Toast from '../components/Toast';
@@ -72,7 +75,12 @@ export default function AdminSports() {
   const addCoach = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await addDoc(collection(db, 'users'), {
+      const tempApp = initializeApp(firebaseConfig as any, 'temp-create-coach-' + Date.now());
+      const tempAuth = getAuth(tempApp);
+      
+      const userCredential = await createUserWithEmailAndPassword(tempAuth, newCoach.email, newCoach.password);
+      
+      await setDoc(doc(db, 'users', userCredential.user.uid), {
         fullName: newCoach.fullName,
         email: newCoach.email,
         phone: newCoach.phone,
@@ -80,6 +88,9 @@ export default function AdminSports() {
         role: 'coach',
         createdAt: new Date().toISOString()
       });
+      
+      await deleteApp(tempApp);
+      
       setShowAddCoachModal(false);
       setToast({ message: 'Coach added successfully', type: 'success' });
       setNewCoach({ fullName: '', email: '', password: '', phone: '', indexNumber: '', sportsManaged: [] });
