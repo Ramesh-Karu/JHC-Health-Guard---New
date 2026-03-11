@@ -36,7 +36,7 @@ export default function DeveloperMenu() {
               </div>
             </div>
             <a 
-              href="https://github.com/RameshnathanKaruvoolan" 
+              href="https://github.com/Ramesh-Karu" 
               target="_blank" 
               rel="noopener noreferrer"
               className="flex items-center gap-3 w-full p-3 bg-white/50 rounded-xl hover:bg-white/80 transition-all text-slate-700 font-medium"

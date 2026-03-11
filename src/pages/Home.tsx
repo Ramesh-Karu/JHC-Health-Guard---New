@@ -31,6 +31,7 @@ import {
   Calendar,
   User,
   Ruler,
+  Github,
   Scale as ScaleIcon
 } from 'lucide-react';
 import QRScanner from '../components/QRScanner';
@@ -725,8 +726,13 @@ export default function Home() {
             </div>
           </div>
           <div className="pt-12 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-6">
-            <p className="text-slate-500 text-xs">© 2026 Health Guard. All rights reserved.</p>
+            <p className="text-slate-500 text-xs">
+              © 2026 Health Guard. Developed by <a href="https://github.com/Ramesh-Karu" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">Ramesh Karu</a>. All rights reserved.
+            </p>
             <div className="flex gap-6">
+              <a href="https://github.com/Ramesh-Karu" target="_blank" rel="noopener noreferrer" className="w-8 h-8 bg-white/5 rounded-lg flex items-center justify-center hover:bg-white/10 transition-colors cursor-pointer">
+                <Github size={16} className="text-slate-400" />
+              </a>
               <div className="w-8 h-8 bg-white/5 rounded-lg flex items-center justify-center hover:bg-white/10 transition-colors cursor-pointer">
                 <Users size={16} className="text-slate-400" />
               </div>
@@ -767,7 +773,7 @@ export default function Home() {
                 <div className="flex items-center gap-6 mb-8 border-b border-slate-100 pb-8">
                   <div className="w-24 h-24 rounded-2xl overflow-hidden shadow-lg bg-white border border-slate-100">
                     <img 
-                      src="https://upload.wikimedia.org/wikipedia/en/5/5e/Jaffna_Hindu_College_Logo.png" 
+                      src="https://image2url.com/r2/default/images/1773243015309-8d00926d-bd9c-4a4d-931d-e00cbf039414.jpg" 
                       alt={scannedStudent.fullName}
                       className="w-full h-full object-contain p-2"
                     />

@@ -31,6 +31,7 @@ import {
   Leaf,
   ShoppingCart,
   ShieldCheck,
+  Github,
   Coffee
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
