@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { collection, query, orderBy, getDocs, addDoc, doc, updateDoc, increment, deleteDoc, where } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../firebase';
+import { db, handleFirestoreError, OperationType, collection, query, orderBy, getDocs, addDoc, doc, updateDoc, increment, deleteDoc, where } from '../firebase';
 import { 
   Heart, 
   MessageCircle, 

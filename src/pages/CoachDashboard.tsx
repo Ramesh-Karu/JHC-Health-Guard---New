@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../firebase';
+import { db, handleFirestoreError, OperationType, collection, getDocs, query, where } from '../firebase';
 import { Users, Activity, Calendar, Award, CheckCircle, QrCode } from 'lucide-react';
 import { useAuth } from '../App';
 import QRScanner from '../components/QRScanner';

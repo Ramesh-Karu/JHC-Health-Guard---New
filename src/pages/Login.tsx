@@ -2,9 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Heart, Lock, User, ChevronRight, AlertCircle, ArrowLeft } from 'lucide-react';
-import { signInWithPopup, GoogleAuthProvider, signInWithEmailAndPassword } from 'firebase/auth';
-import { auth, db } from '../firebase';
-import { doc, getDoc, setDoc, query, collection, where, getDocs } from 'firebase/firestore';
+import { auth, db, signInWithPopup, GoogleAuthProvider, signInWithEmailAndPassword, doc, getDoc, setDoc, query, collection, where, getDocs } from '../firebase';
 import { useAuth } from '../App';
 
 export default function Login() {

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs, addDoc, updateDoc, doc, increment } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../firebase';
+import { db, handleFirestoreError, OperationType, collection, getDocs, addDoc, updateDoc, doc, increment } from '../firebase';
 import { useAuth } from '../App';
 import Toast from '../components/Toast';
 

@@ -1,10 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { collection, query, where, getDocs, addDoc, doc, deleteDoc, setDoc } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../firebase';
-import { initializeApp, deleteApp } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
-import firebaseConfig from '../../firebase-applet-config.json';
+import { db, handleFirestoreError, OperationType, collection, query, where, getDocs, addDoc, doc, deleteDoc, setDoc, initializeApp, deleteApp, getAuth, createUserWithEmailAndPassword, firebaseConfig } from '../firebase';
 import { Plus, Trash2, Users, UserPlus, Award } from 'lucide-react';
 import { useAuth } from '../App';
 import Toast from '../components/Toast';

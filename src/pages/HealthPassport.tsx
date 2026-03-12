@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { collection, query, where, getDocs, doc, getDoc, orderBy } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../firebase';
+import { db, handleFirestoreError, OperationType, collection, query, where, getDocs, doc, getDoc, orderBy } from '../firebase';
 import { 
   User, 
   ShieldCheck, 

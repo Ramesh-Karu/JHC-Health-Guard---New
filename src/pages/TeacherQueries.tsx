@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { collection, query, where, getDocs, updateDoc, doc, orderBy } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../firebase';
+import { db, handleFirestoreError, OperationType, collection, query, where, getDocs, updateDoc, doc, orderBy } from '../firebase';
 import { HelpCircle, CheckCircle, Clock, Send, MessageSquare } from 'lucide-react';
 import { useAuth } from '../App';
 

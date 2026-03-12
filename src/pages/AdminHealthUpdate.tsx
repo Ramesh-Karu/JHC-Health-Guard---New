@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { collection, query, where, getDocs, addDoc } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../firebase';
+import { db, handleFirestoreError, OperationType, collection, query, where, getDocs, addDoc } from '../firebase';
 import { Search, Save, User, FileUp } from 'lucide-react';
 import Papa from 'papaparse';
 import Toast from '../components/Toast';

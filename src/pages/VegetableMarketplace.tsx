@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, getDocs, addDoc, updateDoc, doc, increment } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../firebase';
+import { db, handleFirestoreError, OperationType, collection, query, getDocs, addDoc, updateDoc, doc, increment } from '../firebase';
 import { useAuth } from '../App';
 import { ShoppingCart, Leaf, Info } from 'lucide-react';
 

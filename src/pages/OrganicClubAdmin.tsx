@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs, addDoc, updateDoc, doc, deleteDoc } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../firebase';
+import { db, handleFirestoreError, OperationType, collection, getDocs, addDoc, updateDoc, doc, deleteDoc } from '../firebase';
 import { useAuth } from '../App';
 import { QrCode } from 'lucide-react';
 import QRScanner from '../components/QRScanner';

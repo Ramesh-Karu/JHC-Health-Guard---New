@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../firebase';
+import { db, handleFirestoreError, OperationType, collection, query, where, getDocs, orderBy } from '../firebase';
 import { Apple, Search, ChevronRight, Info, Scale, Flame, Heart, X, Brain, Sparkles } from 'lucide-react';
 import { FOOD_CATEGORIES, FOOD_ITEMS } from '../constants';
 import { useAuth } from '../App';

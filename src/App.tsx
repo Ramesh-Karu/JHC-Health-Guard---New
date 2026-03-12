@@ -1,9 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation, NavLink, Outlet } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { doc, getDoc, onSnapshot } from 'firebase/firestore';
-import { auth, db } from './firebase';
+import { auth, db, onAuthStateChanged, signOut, doc, getDoc, onSnapshot } from './firebase';
 import { 
   UserCircle,
   LayoutDashboard, 

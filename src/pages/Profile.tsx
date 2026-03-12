@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../firebase';
+import { db, handleFirestoreError, OperationType, doc, updateDoc } from '../firebase';
 import { useNavigate } from 'react-router-dom';
 import { 
   User as UserIcon, 

@@ -1,10 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'motion/react';
-import { initializeApp, deleteApp } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
-import { db, handleFirestoreError, OperationType } from '../firebase';
-import { collection, query, doc, setDoc, deleteDoc, onSnapshot, updateDoc } from 'firebase/firestore';
-import firebaseConfig from '../../firebase-applet-config.json';
+import { db, handleFirestoreError, OperationType, collection, query, doc, setDoc, deleteDoc, onSnapshot, updateDoc, initializeApp, deleteApp, getAuth, createUserWithEmailAndPassword, firebaseConfig } from '../firebase';
 import { Search, Plus, Trash2, FileDown, FileUp, X, UserPlus, Edit2 } from 'lucide-react';
 import { useAuth } from '../App';
 import Papa from 'papaparse';

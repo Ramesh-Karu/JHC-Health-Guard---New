@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { collection, query, orderBy, getDocs, addDoc, deleteDoc, doc } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../firebase';
+import { db, handleFirestoreError, OperationType, collection, query, orderBy, getDocs, addDoc, deleteDoc, doc } from '../firebase';
 import { 
   Plus, 
   Trash2, 

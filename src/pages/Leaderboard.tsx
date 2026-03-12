@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../firebase';
+import { db, handleFirestoreError, OperationType, collection, query, where, orderBy, getDocs } from '../firebase';
 import { Trophy, Medal, Award, Star, ChevronRight, Search } from 'lucide-react';
 import { useAuth } from '../App';
 
